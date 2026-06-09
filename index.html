@@ -31,6 +31,16 @@
   <main id="view"></main>
 
   <!-- Modules load in dependency order; no build step. -->
+  <script>
+    // Share/Feedback config — Piano supplies its own buttons (no floating FAB).
+    window.APP_INFO = {
+      name: "Simpli Piano",
+      url: "https://jconiker.github.io/simpli-piano/",
+      email: "joeconiker@gmail.com",
+      noFab: true,
+    };
+  </script>
+  <script src="static/js/feedback.js"></script>
   <script src="static/js/audio.js"></script>
   <script src="static/js/keyboard.js"></script>
   <script src="static/js/songs.js"></script>

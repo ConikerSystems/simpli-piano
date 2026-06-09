@@ -85,6 +85,10 @@
         tile("🎹  Free Play", "Just play around", () => freePlay()),
         tile("✏️  Add a Song", "Type in your own", () => editor()),
       ]),
+      el("div", { class: "home-footer" }, [
+        el("button", { class: "foot-btn", onclick: () => window.Feedback.shareApp() }, "📤  Share"),
+        el("button", { class: "foot-btn", onclick: () => window.Feedback.open() }, "💬  Feedback"),
+      ]),
     ]));
   }
 
