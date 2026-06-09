@@ -78,6 +78,7 @@
       ]);
     view.append(el("div", { class: "home" }, [
       el("p", { class: "tagline" }, "Learn piano the simple way — follow the falling notes."),
+      el("p", { class: "home-hint" }, "New to piano? Start with Course → “Meet the Keys.”"),
       el("div", { class: "tiles" }, [
         tile("🎓  Course", "Step-by-step lessons", () => courseView(), "primary"),
         tile("🎵  Songs", "Guided play-along", () => songList()),
@@ -86,9 +87,13 @@
         tile("✏️  Add a Song", "Type in your own", () => editor()),
       ]),
       el("div", { class: "home-footer" }, [
+        el("button", { class: "foot-btn", onclick: () => { window.location.href = "about.html"; } }, "ℹ️  About"),
         el("button", { class: "foot-btn", onclick: () => window.Feedback.shareApp() }, "📤  Share"),
         el("button", { class: "foot-btn", onclick: () => window.Feedback.open() }, "💬  Feedback"),
       ]),
+      el("div", { class: "credit", html:
+        'Developed by <a href="https://conikersystems.com" target="_blank" rel="noopener">Coniker Systems™</a>'
+        + '<br>© 2026 Coniker Systems™' }),
     ]));
   }
 
@@ -162,12 +167,16 @@
     let tempoScale = 1;
 
     const progress = el("div", { class: "progress-bar" }, el("span"));
-    const status = el("div", { class: "lesson-status" }, "Tap Start");
+    const modeLabel = (m) => (m === "step" ? "Practice" : "Play in time");
+    const modeHint = (m) => (m === "step"
+      ? "Practice — play the glowing key when you're ready, no rush."
+      : "Play in time — the notes fall to a beat. Use Tempo to slow it down.");
+    const status = el("div", { class: "lesson-status" }, "Tap Start to begin");
     const lane = el("div", { class: "lane" });
     const kbEl = el("div", {});
     const kbWrap = el("div", { class: "kb-wrap" }, kbEl);
 
-    const modeBtn = el("button", { class: "chip" + (mode === "step" ? " active" : ""), onclick: () => toggleMode() }, mode === "step" ? "Step" : "Moving");
+    const modeBtn = el("button", { class: "chip" + (mode === "step" ? " active" : ""), onclick: () => toggleMode() }, modeLabel(mode));
     const tempoVal = el("span", { class: "tempo-val" }, "100%");
     const tempo = el("input", { type: "range", min: "50", max: "100", step: "5", value: "100",
       oninput: (e) => { tempoScale = e.target.value / 100; tempoVal.textContent = e.target.value + "%"; } });
@@ -201,14 +210,16 @@
 
     function toggleMode() {
       mode = mode === "step" ? "moving" : "step";
-      modeBtn.textContent = mode === "step" ? "Step" : "Moving";
+      modeBtn.textContent = modeLabel(mode);
       modeBtn.classList.toggle("active", mode === "step");
       engine.load(song, { mode, tempoScale });
+      status.textContent = modeHint(mode);
     }
     function begin() {
       engine.load(song, { mode, tempoScale });
       engine.start();
       startBtn.textContent = "↻ Restart";
+      status.textContent = modeHint(mode);
     }
     function finish(res) {
       saveStars(song.id, res.stars);
