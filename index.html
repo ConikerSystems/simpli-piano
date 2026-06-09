@@ -2,10 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <!-- viewport-fit=cover + user-scalable=no: full-bleed, no pinch-zoom while playing on iPad -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>Simpli Piano</title>
-  <meta name="description" content="A simple, touch-friendly piano you can play right in the browser — installable on your iPad." />
+  <meta name="description" content="Learn piano with guided, color-coded play-along lessons — installable on your iPad." />
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.webmanifest" />
@@ -21,29 +20,21 @@
 </head>
 <body>
   <header class="topbar">
+    <button id="back-btn" class="back" aria-label="Back" hidden>‹</button>
     <div class="title">
       <span class="logo" aria-hidden="true"></span>
-      <h1>Simpli&nbsp;Piano</h1>
+      <h1 id="view-title">Simpli&nbsp;Piano</h1>
     </div>
-    <div class="controls">
-      <label class="toggle">
-        <input type="checkbox" id="labels-toggle" checked />
-        <span>Note labels</span>
-      </label>
-      <div class="octave">
-        <button id="octave-down" aria-label="Lower octave">–</button>
-        <span id="octave-label">C4</span>
-        <button id="octave-up" aria-label="Raise octave">+</button>
-      </div>
-    </div>
+    <div id="topbar-actions" class="topbar-actions"></div>
   </header>
 
-  <main id="stage">
-    <div id="keyboard" class="keyboard" role="application" aria-label="Piano keyboard"></div>
-  </main>
+  <main id="view"></main>
 
-  <footer class="hint" id="hint">Tap a key to play. Add to Home Screen for the full-screen app.</footer>
-
+  <!-- Modules load in dependency order; no build step. -->
+  <script src="static/js/audio.js"></script>
+  <script src="static/js/keyboard.js"></script>
+  <script src="static/js/songs.js"></script>
+  <script src="static/js/engine.js"></script>
   <script src="static/js/app.js"></script>
 </body>
 </html>

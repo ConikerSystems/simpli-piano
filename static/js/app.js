@@ -1,265 +1,260 @@
-/* Simpli Piano — a touch-first, device-adaptive piano.
- *
- * - Web Audio synth (two detuned oscillators + ADSR + lowpass) — no samples to load.
- * - Pointer events give unified mouse + multitouch; multiple keys can sound at once.
- * - The number of octaves shown adapts to the device width so keys stay finger-sized.
- * - Computer keyboard (A,W,S,E,D...) is mapped too, for desktop development.
- */
-
+/* Simpli Piano — app shell: view routing, screens, and progress storage.
+ * Vanilla single-page app; each view rebuilds the #view container. */
 (() => {
   "use strict";
 
-  // ---- Note model -------------------------------------------------------
-  const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
-  const WHITE_OFFSETS = new Set([0, 2, 4, 5, 7, 9, 11]); // semitone offsets that are white keys
-  const MIN_WHITE_KEY_PX = 46;   // keep white keys at least this wide (touch target)
-  const MIN_OCTAVES = 1;
-  const MAX_OCTAVES = 4;
+  const view = document.getElementById("view");
+  const titleEl = document.getElementById("view-title");
+  const backBtn = document.getElementById("back-btn");
+  const actionsEl = document.getElementById("topbar-actions");
 
-  // midi -> frequency (A4 = MIDI 69 = 440 Hz)
-  const midiToFreq = (m) => 440 * Math.pow(2, (m - 69) / 12);
-  const midiToName = (m) => NOTE_NAMES[m % 12] + (Math.floor(m / 12) - 1);
-  const isWhite = (m) => WHITE_OFFSETS.has(((m % 12) + 12) % 12);
-
-  // ---- Audio engine -----------------------------------------------------
-  let audioCtx = null;
-  let masterGain = null;
-  const voices = new Map(); // midi -> { osc1, osc2, gain }
-
-  function ensureAudio() {
-    if (audioCtx) {
-      if (audioCtx.state === "suspended") audioCtx.resume();
-      return;
-    }
-    const AC = window.AudioContext || window.webkitAudioContext;
-    audioCtx = new AC();
-    masterGain = audioCtx.createGain();
-    masterGain.gain.value = 0.9;
-    masterGain.connect(audioCtx.destination);
-  }
-
-  function noteOn(midi) {
-    ensureAudio();
-    if (voices.has(midi)) return; // already sounding
-    const now = audioCtx.currentTime;
-    const freq = midiToFreq(midi);
-
-    const gain = audioCtx.createGain();
-    const filter = audioCtx.createBiquadFilter();
-    filter.type = "lowpass";
-    filter.frequency.value = 4200;
-
-    const osc1 = audioCtx.createOscillator();
-    osc1.type = "triangle";
-    osc1.frequency.value = freq;
-
-    const osc2 = audioCtx.createOscillator();
-    osc2.type = "sine";
-    osc2.frequency.value = freq;
-    osc2.detune.value = -6; // slight detune for warmth
-
-    osc1.connect(filter);
-    osc2.connect(filter);
-    filter.connect(gain);
-    gain.connect(masterGain);
-
-    // ADSR-ish: quick attack, gentle decay toward a sustain level
-    const peak = 0.28;
-    const sustain = 0.16;
-    gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.exponentialRampToValueAtTime(peak, now + 0.01);
-    gain.gain.exponentialRampToValueAtTime(sustain, now + 0.35);
-
-    osc1.start(now);
-    osc2.start(now);
-    voices.set(midi, { osc1, osc2, gain });
-  }
-
-  function noteOff(midi) {
-    const v = voices.get(midi);
-    if (!v) return;
-    voices.delete(midi);
-    const now = audioCtx.currentTime;
-    const release = 0.28;
-    v.gain.gain.cancelScheduledValues(now);
-    v.gain.gain.setValueAtTime(Math.max(v.gain.gain.value, 0.0001), now);
-    v.gain.gain.exponentialRampToValueAtTime(0.0001, now + release);
-    v.osc1.stop(now + release + 0.02);
-    v.osc2.stop(now + release + 0.02);
-  }
-
-  // ---- Keyboard rendering ----------------------------------------------
-  const keyboardEl = document.getElementById("keyboard");
-  const octaveLabel = document.getElementById("octave-label");
-  const hintEl = document.getElementById("hint");
-
-  let startMidi = 60;   // C4
-  let octaves = 2;      // recomputed per device
-  let keyEls = new Map(); // midi -> element
-
-  function computeOctaves() {
-    const w = keyboardEl.clientWidth || window.innerWidth;
-    const fit = Math.floor(w / (MIN_WHITE_KEY_PX * 7)); // 7 white keys per octave
-    return Math.max(MIN_OCTAVES, Math.min(MAX_OCTAVES, fit || MIN_OCTAVES));
-  }
-
-  function render() {
-    octaves = computeOctaves();
-    keyboardEl.innerHTML = "";
-    keyEls = new Map();
-
-    const total = octaves * 12 + 1; // +1 so the range ends on a C
-    const whiteMidis = [];
-    for (let i = 0; i < total; i++) {
-      const m = startMidi + i;
-      if (isWhite(m)) whiteMidis.push(m);
-    }
-    const whiteCount = whiteMidis.length;
-
-    // White keys first (flex children), record their index for black-key positioning
-    const whiteIndex = new Map();
-    whiteMidis.forEach((m, idx) => {
-      whiteIndex.set(m, idx);
-      keyboardEl.appendChild(makeKey(m, "white"));
-    });
-
-    // Black keys positioned over the gaps
-    for (let i = 0; i < total; i++) {
-      const m = startMidi + i;
-      if (isWhite(m)) continue;
-      const leftWhite = m - 1;            // black key sits to the right of this white
-      const idx = whiteIndex.get(leftWhite);
-      if (idx === undefined) continue;
-      const el = makeKey(m, "black");
-      const unit = 100 / whiteCount;      // width of one white key in %
-      const blackW = unit * 0.62;
-      el.style.width = blackW + "%";
-      el.style.left = (unit * (idx + 1) - blackW / 2) + "%";
-      keyboardEl.appendChild(el);
-    }
-
-    octaveLabel.textContent = midiToName(startMidi);
-  }
-
-  function makeKey(midi, kind) {
-    const el = document.createElement("div");
-    el.className = "key " + kind;
-    el.dataset.midi = String(midi);
-    const label = document.createElement("span");
-    label.className = "label";
-    label.textContent = midiToName(midi);
-    el.appendChild(label);
-    keyEls.set(midi, el);
-    return el;
-  }
-
-  function setActive(midi, on) {
-    const el = keyEls.get(midi);
-    if (el) el.classList.toggle("active", on);
-  }
-
-  function press(midi) {
-    if (Number.isNaN(midi)) return;
-    setActive(midi, true);
-    noteOn(midi);
-  }
-  function release(midi) {
-    if (Number.isNaN(midi)) return;
-    setActive(midi, false);
-    noteOff(midi);
-  }
-
-  // ---- Pointer input (mouse + multitouch) -------------------------------
-  const pointerNote = new Map(); // pointerId -> midi
-
-  function midiFromPoint(x, y) {
-    const el = document.elementFromPoint(x, y);
-    if (!el) return NaN;
-    const key = el.closest(".key");
-    return key ? Number(key.dataset.midi) : NaN;
-  }
-
-  keyboardEl.addEventListener("pointerdown", (e) => {
-    e.preventDefault();
-    const midi = midiFromPoint(e.clientX, e.clientY);
-    if (Number.isNaN(midi)) return;
-    pointerNote.set(e.pointerId, midi);
-    press(midi);
-  });
-
-  keyboardEl.addEventListener("pointermove", (e) => {
-    if (!pointerNote.has(e.pointerId)) return; // only while pressed (glissando)
-    const midi = midiFromPoint(e.clientX, e.clientY);
-    const prev = pointerNote.get(e.pointerId);
-    if (midi === prev) return;
-    if (!Number.isNaN(prev)) release(prev);
-    if (!Number.isNaN(midi)) {
-      pointerNote.set(e.pointerId, midi);
-      press(midi);
-    } else {
-      pointerNote.delete(e.pointerId);
-    }
-  });
-
-  function endPointer(e) {
-    const midi = pointerNote.get(e.pointerId);
-    if (midi !== undefined) {
-      release(midi);
-      pointerNote.delete(e.pointerId);
-    }
-  }
-  keyboardEl.addEventListener("pointerup", endPointer);
-  keyboardEl.addEventListener("pointercancel", endPointer);
-  keyboardEl.addEventListener("pointerleave", endPointer);
-
-  // ---- Computer keyboard (desktop dev convenience) ----------------------
-  // Two rows mapped to a piano octave starting at the current startMidi.
-  const KEY_MAP = {
-    a: 0, w: 1, s: 2, e: 3, d: 4, f: 5, t: 6,
-    g: 7, y: 8, h: 9, u: 10, j: 11, k: 12, o: 13, l: 14, p: 15,
+  // ---- Progress (localStorage) -----------------------------------------
+  const PROG_KEY = "piano.progress";
+  const loadProgress = () => { try { return JSON.parse(localStorage.getItem(PROG_KEY)) || {}; } catch { return {}; } };
+  const saveStars = (songId, stars) => {
+    const p = loadProgress();
+    if (!p[songId] || stars > p[songId].stars) { p[songId] = { stars }; localStorage.setItem(PROG_KEY, JSON.stringify(p)); }
   };
-  const heldKeys = new Set();
-  window.addEventListener("keydown", (e) => {
-    const k = e.key.toLowerCase();
-    if (!(k in KEY_MAP) || heldKeys.has(k) || e.metaKey || e.ctrlKey) return;
-    heldKeys.add(k);
-    press(startMidi + KEY_MAP[k]);
-  });
-  window.addEventListener("keyup", (e) => {
-    const k = e.key.toLowerCase();
-    if (!(k in KEY_MAP)) return;
-    heldKeys.delete(k);
-    release(startMidi + KEY_MAP[k]);
-  });
+  const starsFor = (songId) => (loadProgress()[songId]?.stars || 0);
+  const starRow = (n) => "★★★".slice(0, n) + "☆☆☆".slice(0, 3 - n);
 
-  // ---- Controls ---------------------------------------------------------
-  document.getElementById("octave-up").addEventListener("click", () => {
-    if (startMidi <= 96) { startMidi += 12; render(); }
-  });
-  document.getElementById("octave-down").addEventListener("click", () => {
-    if (startMidi >= 24) { startMidi -= 12; render(); }
-  });
-  document.getElementById("labels-toggle").addEventListener("change", (e) => {
-    document.body.classList.toggle("no-labels", !e.target.checked);
-  });
+  // ---- Tiny DOM helper --------------------------------------------------
+  function el(tag, attrs = {}, kids = []) {
+    const e = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) {
+      if (k === "class") e.className = v;
+      else if (k === "html") e.innerHTML = v;
+      else if (k.startsWith("on") && typeof v === "function") e.addEventListener(k.slice(2), v);
+      else if (v !== null && v !== undefined) e.setAttribute(k, v);
+    }
+    (Array.isArray(kids) ? kids : [kids]).forEach((c) => c != null && e.append(c.nodeType ? c : document.createTextNode(c)));
+    return e;
+  }
 
-  // Unlock audio on first interaction (iOS requires a user gesture).
-  const unlock = () => { ensureAudio(); window.removeEventListener("pointerdown", unlock); };
-  window.addEventListener("pointerdown", unlock);
+  function setChrome(title, { back = false, actions = [] } = {}) {
+    titleEl.innerHTML = title;
+    backBtn.hidden = !back;
+    actionsEl.innerHTML = "";
+    actions.forEach((a) => actionsEl.append(a));
+  }
+  function clearView() { view.innerHTML = ""; if (window._kb) { window._kb = null; } }
 
-  // Re-render on resize/orientation change (debounced).
-  let resizeTimer = null;
-  window.addEventListener("resize", () => {
-    clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(render, 120);
-  });
+  // ---- Home -------------------------------------------------------------
+  function home() {
+    clearView();
+    setChrome("Simpli&nbsp;Piano", { back: false });
+    backBtn.onclick = null;
+    const tile = (label, sub, onclick, cls) =>
+      el("button", { class: "tile " + (cls || ""), onclick }, [
+        el("span", { class: "tile-label" }, label),
+        el("span", { class: "tile-sub" }, sub),
+      ]);
+    view.append(el("div", { class: "home" }, [
+      el("p", { class: "tagline" }, "Learn piano the simple way — follow the falling notes."),
+      el("div", { class: "tiles" }, [
+        tile("🎵  Songs", "Guided play-along lessons", () => songList(), "primary"),
+        tile("🎹  Free Play", "Just play around", () => freePlay()),
+        tile("✏️  Add a Song", "Type in your own", () => editor()),
+      ]),
+    ]));
+  }
 
-  render();
+  // ---- Song list --------------------------------------------------------
+  function songList() {
+    clearView();
+    setChrome("Songs", { back: true });
+    backBtn.onclick = home;
+    const list = el("div", { class: "song-list" });
+    window.Songs.all().forEach((song) => {
+      const stars = starsFor(song.id);
+      list.append(el("button", { class: "song-row", onclick: () => lesson(song.id) }, [
+        el("span", { class: "song-dot diff-" + song.difficulty }, "♪"),
+        el("span", { class: "song-meta" }, [
+          el("span", { class: "song-title" }, song.title + (song.user ? "  ·  yours" : "")),
+          el("span", { class: "song-sub" }, "Level " + song.difficulty + " · " + song.notes.length + " notes"),
+        ]),
+        el("span", { class: "song-stars" }, starRow(stars)),
+      ]));
+    });
+    view.append(list);
+  }
 
-  // ---- Service worker (PWA) --------------------------------------------
-  if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => {
-      navigator.serviceWorker.register("sw.js").catch(() => {});
+  // ---- Lesson -----------------------------------------------------------
+  function lesson(songId) {
+    const song = window.Songs.byId(songId);
+    if (!song) return songList();
+    clearView();
+    setChrome(song.title, { back: true });
+    backBtn.onclick = songList;
+
+    let mode = "step";
+    let tempoScale = 1;
+
+    const progress = el("div", { class: "progress-bar" }, el("span"));
+    const status = el("div", { class: "lesson-status" }, "Tap Start");
+    const lane = el("div", { class: "lane" });
+    const kbWrap = el("div", { class: "kb-wrap" });
+    const kbEl = el("div", {});
+    kbWrap.append(kbEl);
+
+    // Mode + tempo + actions
+    const modeBtn = el("button", { class: "chip active", onclick: () => toggleMode() }, "Step");
+    const tempoVal = el("span", { class: "tempo-val" }, "100%");
+    const tempo = el("input", { type: "range", min: "50", max: "100", step: "5", value: "100",
+      oninput: (e) => { tempoScale = e.target.value / 100; tempoVal.textContent = e.target.value + "%"; } });
+    const startBtn = el("button", { class: "chip play", onclick: () => begin() }, "▶ Start");
+    const listenBtn = el("button", { class: "chip", onclick: () => engine.listen() }, "🔊 Listen");
+
+    const controls = el("div", { class: "lesson-controls" }, [
+      modeBtn,
+      el("label", { class: "tempo" }, [el("span", {}, "Tempo"), tempo, tempoVal]),
+      listenBtn, startBtn,
+    ]);
+
+    view.append(el("div", { class: "lesson" }, [controls, progress, status, lane, kbWrap]));
+
+    // Keyboard sized to the song's range.
+    const r = window.Songs.rangeOf(song.notes);
+    const startC = r.lo - ((r.lo % 12 + 12) % 12);
+    const octaves = Math.max(1, Math.ceil((r.hi - startC) / 12));
+    const kb = new window.Keyboard(kbEl, { startMidi: startC, octaves, showLabels: true });
+    window._kb = kb;
+
+    const engine = new window.LessonEngine({
+      laneEl: lane, keyboard: kb,
+      onProgress: (i, n) => { progress.firstChild.style.width = (n ? (i / n) * 100 : 0) + "%"; },
+      onStatus: (t) => (status.textContent = t),
+      onComplete: (res) => finish(res),
+    });
+    kb.onPress = (m) => engine.input(m);
+
+    function toggleMode() {
+      mode = mode === "step" ? "moving" : "step";
+      modeBtn.textContent = mode === "step" ? "Step" : "Moving";
+    }
+    function begin() {
+      engine.load(song, { mode, tempoScale });
+      engine.start();
+      startBtn.textContent = "↻ Restart";
+      startBtn.onclick = () => { engine.load(song, { mode, tempoScale }); engine.start(); };
+    }
+    function finish(res) {
+      saveStars(song.id, res.stars);
+      const overlay = el("div", { class: "overlay", onclick: (e) => { if (e.target === overlay) overlay.remove(); } }, [
+        el("div", { class: "card" }, [
+          el("div", { class: "big-stars" }, starRow(res.stars)),
+          el("div", { class: "result" }, Math.round(res.accuracy * 100) + "% accuracy"),
+          el("div", { class: "result-sub" }, res.good + " clean · " + res.ok + " with slips" + (res.missed ? " · " + res.missed + " missed" : "")),
+          el("div", { class: "card-actions" }, [
+            el("button", { class: "chip", onclick: () => { overlay.remove(); songList(); } }, "Songs"),
+            el("button", { class: "chip play", onclick: () => { overlay.remove(); begin(); } }, "Again"),
+          ]),
+        ]),
+      ]);
+      view.append(overlay);
+    }
+
+    engine.load(song, { mode, tempoScale });
+  }
+
+  // ---- Free play --------------------------------------------------------
+  function freePlay() {
+    clearView();
+    let start = 60, kb;
+    const kbEl = el("div", {});
+    const setOct = (d) => { start = Math.min(96, Math.max(24, start + d)); kb.setRange(start, kb.octaves); octLabel.textContent = window.Theory.midiToName(start); };
+    const octLabel = el("span", { class: "tempo-val" }, "C4");
+    const down = el("button", { class: "chip", onclick: () => setOct(-12) }, "–");
+    const up = el("button", { class: "chip", onclick: () => setOct(12) }, "+");
+    const labels = el("label", { class: "tempo" }, [
+      el("input", { type: "checkbox", checked: "checked", onchange: (e) => kb.setLabels(e.target.checked) }),
+      el("span", {}, "Labels"),
+    ]);
+    setChrome("Free Play", { back: true, actions: [down, octLabel, up] });
+    backBtn.onclick = home;
+    view.append(el("div", { class: "lesson" }, [el("div", { class: "lesson-controls" }, [labels]), el("div", { class: "kb-wrap grow" }, kbEl)]));
+    kb = new window.Keyboard(kbEl, { startMidi: start });
+    window._kb = kb;
+  }
+
+  // ---- Song editor ------------------------------------------------------
+  function editor(editId) {
+    clearView();
+    setChrome("Add a Song", { back: true });
+    backBtn.onclick = songList;
+
+    const existing = editId ? window.Songs.byId(editId) : null;
+    const title = el("input", { type: "text", class: "field", placeholder: "Song title", value: existing?.title || "" });
+    const tempo = el("input", { type: "number", class: "field small", min: "40", max: "200", value: existing?.tempo || 90 });
+    const notes = el("textarea", { class: "field area", placeholder: "E D C D E E Eh   D D Dh   E G Gh",
+      html: existing ? window.Songs.serialize(existing.notes) : "" });
+    const msg = el("div", { class: "editor-msg" });
+
+    const help = el("details", { class: "help" }, [
+      el("summary", {}, "How to type notes"),
+      el("div", { class: "html",
+        html: "Letters <b>A–G</b>, space-separated. Octave digit optional (sticky), e.g. <code>C4</code>. "
+            + "Durations: <code>w</code> whole · <code>h</code> half · <code>q</code> quarter (default) · "
+            + "<code>e</code> eighth · <code>s</code> sixteenth (add <code>.</code> to dot). "
+            + "Sharps/flats: <code>F#</code> <code>Bb</code>. Rest: <code>Rq</code>. Chord: <code>C+E+G</code>." }),
+    ]);
+
+    const preview = el("button", { class: "chip", onclick: () => {
+      const { notes: ns, errors } = window.Songs.parseSong(notes.value);
+      if (errors.length) { showMsg("Can't read: " + errors.join(", "), true); return; }
+      if (!ns.length) { showMsg("Nothing to play yet.", true); return; }
+      tempPlay(ns, +tempo.value || 90);
+    } }, "🔊 Preview");
+
+    const save = el("button", { class: "chip play", onclick: () => {
+      const res = window.Songs.saveUserSong({ id: existing?.id, title: title.value.trim(), tempo: +tempo.value || 90, src: notes.value });
+      if (res.errors) { showMsg("Can't save: " + res.errors.join(", "), true); return; }
+      songList();
+    } }, existing ? "Save changes" : "Save song");
+
+    view.append(el("div", { class: "editor" }, [
+      el("div", { class: "field-row" }, [title, tempo]),
+      notes, help, msg,
+      el("div", { class: "editor-actions" }, [preview, save]),
+      userSongsPanel(),
+    ]));
+
+    function showMsg(t, bad) { msg.textContent = t; msg.className = "editor-msg" + (bad ? " bad" : " ok"); }
+  }
+
+  function userSongsPanel() {
+    const mine = window.Songs.loadUser();
+    if (!mine.length) return el("div", {});
+    const wrap = el("div", { class: "mine" }, el("h3", {}, "Your songs"));
+    mine.forEach((s) => wrap.append(el("div", { class: "mine-row" }, [
+      el("span", {}, s.title),
+      el("button", { class: "link", onclick: () => editor(s.id) }, "Edit"),
+      el("button", { class: "link danger", onclick: () => { window.Songs.deleteUserSong(s.id); editor(); } }, "Delete"),
+    ])));
+    return wrap;
+  }
+
+  // Preview helper for the editor (plays a parsed note list).
+  function tempPlay(ns, tempo) {
+    let t = 0; const mpb = 60000 / tempo;
+    ns.forEach((s) => {
+      if (!s.rest) (Array.isArray(s.midi) ? s.midi : [s.midi]).forEach((m) =>
+        setTimeout(() => window.PianoAudio.pluck(m, Math.max(180, s.beats * mpb * 0.9)), t));
+      t += s.beats * mpb;
     });
   }
+
+  // Unlock audio on first gesture (iOS requirement).
+  window.addEventListener("pointerdown", function unlock() {
+    window.PianoAudio.ensure();
+    window.removeEventListener("pointerdown", unlock);
+  });
+  // Re-fit the keyboard on resize for auto-range views (free play).
+  let rt = null;
+  window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { if (window._kb && !window._kb.fixedRange) window._kb.render(); }, 150); });
+
+  // Service worker
+  if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+
+  home();
 })();
