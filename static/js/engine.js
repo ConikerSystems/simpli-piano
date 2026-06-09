@@ -197,15 +197,23 @@
         if (dist > WINDOW_BEATS + 0.15) { this.keyboard.flash(midi, "bad"); return; }
       }
 
-      if (this.remaining.has(midi)) {
-        this.remaining.delete(midi);
-        this.keyboard.flash(midi, "good");
+      // Exact match, or (when the mic is on) any octave of an expected note —
+      // the mic can mis-guess octave, so we grade by note name there.
+      let matched;
+      if (this.remaining.has(midi)) matched = midi;
+      else if (this.octaveTolerant) matched = [...this.remaining].find((r) => ((r - midi) % 12 + 12) % 12 === 0);
+
+      if (matched !== undefined) {
+        this.remaining.delete(matched);
+        this.keyboard.flash(matched, "good"); // light the on-screen key for the expected note
         if (this.remaining.size === 0) this._noteComplete(note);
       } else {
         this.mistakeThisNote = true;
         this.keyboard.flash(midi, "bad");
       }
     }
+
+    setOctaveTolerant(on) { this.octaveTolerant = on; }
 
     _noteComplete(note) {
       note._resolved = true;

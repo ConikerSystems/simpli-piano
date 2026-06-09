@@ -47,11 +47,11 @@
   }
 
   // ---- Microphone toggle (shared by lessons + trainer) ------------------
-  function micToggle(feed) {
+  function micToggle(feed, hooks = {}) {
     const note = el("span", { class: "mic-note" });
     const btn = el("button", { class: "chip mic" }, "🎤 Mic");
     btn.onclick = async () => {
-      if (window._mic) { window._mic.stop(); window._mic = null; btn.classList.remove("active"); note.textContent = ""; return; }
+      if (window._mic) { window._mic.stop(); window._mic = null; btn.classList.remove("active"); note.textContent = ""; hooks.onStop && hooks.onStop(); return; }
       if (!window.Mic.supported) { note.textContent = "no mic"; return; }
       try {
         const mic = new window.Mic.Mic({
@@ -60,6 +60,7 @@
         });
         await mic.start();
         window._mic = mic; btn.classList.add("active"); note.textContent = "listening…";
+        hooks.onStart && hooks.onStart();
       } catch { note.textContent = "mic blocked"; }
     };
     return el("span", { class: "mic-wrap" }, [btn, note]);
@@ -171,7 +172,11 @@
 
     const controls = el("div", { class: "lesson-controls" }, [
       modeBtn, el("label", { class: "tempo" }, [el("span", {}, "Tempo"), tempo, tempoVal]),
-      listenBtn, startBtn, micToggle((m) => engine.input(m)),
+      listenBtn, startBtn,
+      micToggle((m) => engine.input(m), {
+        onStart: () => engine.setOctaveTolerant(true),
+        onStop: () => engine.setOctaveTolerant(false),
+      }),
     ]);
     view.append(el("div", { class: "lesson" }, [controls, progress, status, lane, kbWrap]));
 
@@ -242,6 +247,7 @@
       displayMode: opts.displayMode || "staff",
       fixedNotes: opts.fixedNotes || null,
       goal: opts.goal || null,
+      showKey: opts.showKey !== false,
       onUpdate: (s) => {
         stats.textContent = opts.goal
           ? (opts.prompt || "Name the note") + " — " + s.correct + "/" + s.goal + "  ·  " + s.accuracy + "%"
@@ -252,7 +258,10 @@
     window._active = trainer;
     kb.onPress = (m) => trainer.input(m);
 
+    const showKeyBtn = el("button", { class: "chip" + (opts.showKey !== false ? " active" : ""),
+      onclick: () => { const on = !showKeyBtn.classList.contains("active"); showKeyBtn.classList.toggle("active", on); trainer.setShowKey(on); } }, "Show key");
     const controls = el("div", { class: "lesson-controls" }, [
+      showKeyBtn,
       el("button", { class: "chip", onclick: () => trainer.next() }, "Skip ›"),
       micToggle((m) => trainer.input(m)),
     ]);

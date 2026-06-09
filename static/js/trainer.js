@@ -91,7 +91,8 @@
   }
 
   class Trainer {
-    constructor({ svgEl, keyboard, onUpdate, displayMode = "staff", fixedNotes = null, goal = null, onDone = null }) {
+    constructor({ svgEl, keyboard, onUpdate, displayMode = "staff", fixedNotes = null, goal = null, onDone = null,
+                  showKey = true, octaveAgnostic = true }) {
       this.svg = svgEl;
       this.keyboard = keyboard;
       this.onUpdate = onUpdate || (() => {});
@@ -99,6 +100,8 @@
       this.fixedNotes = fixedNotes;     // if set, drill only these (course key-find)
       this.goal = goal;                 // correct answers to finish (course), else endless
       this.onDone = onDone;
+      this.showKey = showKey;           // light up the matching key on the on-screen piano
+      this.octaveAgnostic = octaveAgnostic; // grade by note name, any octave (great for mic)
       this.level = 0;
       this.correct = 0; this.total = 0; this.streak = 0; this.done = false;
     }
@@ -107,23 +110,34 @@
 
     start() { this.next(); }
 
-    next() {
+    setShowKey(on) { this.showKey = on; this._showTarget(); }
+
+    // Always show the learner the staff/name; optionally also light the piano key.
+    _showTarget() {
       this.keyboard.clearHighlights();
+      if (this.showKey && this.target != null) this.keyboard.highlight(this.target, "hint");
+    }
+
+    _matches(midi) {
+      return this.octaveAgnostic ? (((midi - this.target) % 12 + 12) % 12 === 0) : (midi === this.target);
+    }
+
+    next() {
       const pool = this.pool();
       let m;
       do { m = pool[Math.floor(Math.random() * pool.length)]; } while (m === this.target && pool.length > 1);
       this.target = m;
       drawStaff(this.svg, m, this.mode);
+      this._showTarget();
       this._emit();
     }
 
     input(midi) {
       if (this.done) return;
       this.total++;
-      if (midi === this.target) {
+      if (this._matches(midi)) {
         this.correct++; this.streak++;
-        this.keyboard.flash(midi, "good");
-        // level up on a streak (only in endless/expanding mode)
+        this.keyboard.flash(this.target, "good"); // light the on-screen key (played octave may differ via mic)
         if (!this.fixedNotes && this.streak > 0 && this.streak % 5 === 0 && this.level < LEVELS.length - 1) this.level++;
         this._emit();
         if (this.goal && this.correct >= this.goal) { this._finish(); return; }
@@ -131,8 +145,8 @@
       } else {
         this.streak = 0;
         this.keyboard.flash(midi, "bad");
-        this.keyboard.highlight(this.target, "hint"); // reveal the right key briefly
-        setTimeout(() => this.keyboard.clearHighlights(), 700);
+        this.keyboard.highlight(this.target, "hint"); // reveal the right key
+        setTimeout(() => this._showTarget(), 700);
         this._emit();
       }
     }
