@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <!-- viewport-fit=cover + user-scalable=no: full-bleed, no pinch-zoom while playing on iPad -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Simpli Piano</title>
+  <meta name="description" content="A simple, touch-friendly piano you can play right in the browser — installable on your iPad." />
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="theme-color" content="#0f1117" />
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Simpli Piano" />
+  <meta name="mobile-web-app-capable" content="yes" />
+
+  <link rel="stylesheet" href="static/css/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="title">
+      <span class="logo" aria-hidden="true"></span>
+      <h1>Simpli&nbsp;Piano</h1>
+    </div>
+    <div class="controls">
+      <label class="toggle">
+        <input type="checkbox" id="labels-toggle" checked />
+        <span>Note labels</span>
+      </label>
+      <div class="octave">
+        <button id="octave-down" aria-label="Lower octave">–</button>
+        <span id="octave-label">C4</span>
+        <button id="octave-up" aria-label="Raise octave">+</button>
+      </div>
+    </div>
+  </header>
+
+  <main id="stage">
+    <div id="keyboard" class="keyboard" role="application" aria-label="Piano keyboard"></div>
+  </main>
+
+  <footer class="hint" id="hint">Tap a key to play. Add to Home Screen for the full-screen app.</footer>
+
+  <script src="static/js/app.js"></script>
+</body>
+</html>

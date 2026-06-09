@@ -1,0 +1,14 @@
+# Simpli Piano — back up code only. No private data lives here.
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.env
+*.log
+.DS_Store
+.claude/
+# Data / databases (none today, but guard anyway — DBs stay local, never pushed)
+*.db
+*.sqlite
+*.sqlite3
+data/

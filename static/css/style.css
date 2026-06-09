@@ -1,0 +1,162 @@
+/* Simpli Piano — device-adaptive layout.
+   Dark shell, full-bleed keyboard, large touch targets on iPad. */
+
+:root {
+  --bg: #0f1117;
+  --panel: #171a23;
+  --ink: #e8eaf0;
+  --muted: #8b90a0;
+  --accent: #6ea8fe;
+  --white-key: #f5f6fa;
+  --white-key-press: #c9d4ff;
+  --black-key: #14161d;
+  --black-key-press: #2b3346;
+  --topbar-h: 56px;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  /* Don't let the page scroll/bounce while playing */
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  /* respect iPad notch / home-indicator safe areas */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+           env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+/* ---- Top bar ---- */
+.topbar {
+  flex: 0 0 auto;
+  height: var(--topbar-h);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  background: var(--panel);
+  border-bottom: 1px solid #222634;
+}
+
+.title { display: flex; align-items: center; gap: 10px; }
+.title h1 { font-size: 18px; font-weight: 650; margin: 0; letter-spacing: 0.2px; }
+
+.logo {
+  width: 22px; height: 22px; border-radius: 6px;
+  background:
+    linear-gradient(90deg,
+      var(--white-key) 0 14%, var(--black-key) 14% 20%,
+      var(--white-key) 20% 34%, var(--black-key) 34% 40%,
+      var(--white-key) 40% 60%, var(--black-key) 60% 66%,
+      var(--white-key) 66% 80%, var(--black-key) 80% 86%,
+      var(--white-key) 86% 100%);
+  border-bottom: 3px solid var(--accent);
+}
+
+.controls { display: flex; align-items: center; gap: 18px; }
+
+.toggle { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); cursor: pointer; }
+.toggle input { width: 16px; height: 16px; accent-color: var(--accent); }
+
+.octave { display: flex; align-items: center; gap: 10px; }
+.octave button {
+  width: 36px; height: 36px; border-radius: 9px;
+  border: 1px solid #2c3142; background: #1d2130; color: var(--ink);
+  font-size: 20px; line-height: 1; cursor: pointer;
+}
+.octave button:active { background: #2a3142; }
+#octave-label { font-size: 13px; color: var(--muted); min-width: 28px; text-align: center; }
+
+/* ---- Stage / keyboard ---- */
+#stage {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: stretch;
+  padding: 14px;
+  min-height: 0;
+}
+
+.keyboard {
+  position: relative;
+  flex: 1 1 auto;
+  display: flex;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #000;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+
+.key {
+  position: relative;
+  cursor: pointer;
+  touch-action: none;
+}
+
+.key.white {
+  flex: 1 1 0;
+  background: linear-gradient(#ffffff, var(--white-key));
+  border-right: 1px solid #cfd3df;
+  border-radius: 0 0 7px 7px;
+}
+.key.white:last-child { border-right: none; }
+.key.white.active {
+  background: linear-gradient(var(--white-key-press), #aebdff);
+}
+
+.key.black {
+  position: absolute;
+  top: 0;
+  height: 62%;
+  background: linear-gradient(#2a2e3a, var(--black-key));
+  border-radius: 0 0 6px 6px;
+  z-index: 2;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.5);
+}
+.key.black.active {
+  background: linear-gradient(#3a445e, var(--black-key-press));
+}
+
+.key .label {
+  position: absolute;
+  bottom: 8px;
+  left: 0; right: 0;
+  text-align: center;
+  font-size: 12px;
+  pointer-events: none;
+}
+.key.white .label { color: #6b7180; }
+.key.black .label { color: #aeb6c8; font-size: 10px; }
+body.no-labels .key .label { display: none; }
+
+/* ---- Footer hint ---- */
+.hint {
+  flex: 0 0 auto;
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+  padding: 6px 12px 10px;
+}
+
+/* Hide chrome in standalone (installed) mode for a true app feel */
+@media (display-mode: standalone) {
+  .hint { display: none; }
+}
+
+/* Phone portrait: smaller bar, tighter padding */
+@media (max-width: 540px) {
+  .title h1 { font-size: 16px; }
+  .toggle span { display: none; }
+  #stage { padding: 8px; }
+}
