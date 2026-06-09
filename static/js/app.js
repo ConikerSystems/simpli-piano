@@ -91,9 +91,10 @@
         el("button", { class: "foot-btn", onclick: () => window.Feedback.shareApp() }, "📤  Share"),
         el("button", { class: "foot-btn", onclick: () => window.Feedback.open() }, "💬  Feedback"),
       ]),
-      el("div", { class: "credit", html:
+      el("div", { class: "site-footer", html:
         'Developed by <a href="https://conikersystems.com" target="_blank" rel="noopener">Coniker Systems™</a>'
-        + '<br>© 2026 Coniker Systems™' }),
+        + '<span class="footer-sep">·</span>© 2026 Coniker Systems™'
+        + '<span class="footer-sep">·</span>v1.0' }),
     ]));
   }
 

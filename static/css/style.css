@@ -72,27 +72,59 @@ body {
 .home-footer { display: flex; gap: 12px; justify-content: center; margin-top: 24px; flex-wrap: wrap; }
 .foot-btn { border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 999px; padding: 10px 20px; font-size: 14px; cursor: pointer; }
 .foot-btn:active { background: var(--panel-2); }
-.credit { text-align: center; font-size: 12px; color: var(--muted); margin-top: 20px; line-height: 1.7; }
-.credit a { color: var(--muted); text-decoration: none; }
-.credit a:hover { color: var(--ink); }
 
-/* ---- About page (standalone) ---- */
+/* ---- About page + site footer (AI Ready standard) ---- */
 body.about-page { overflow: auto; display: block; }
-.about-wrap { max-width: 620px; margin: 0 auto; padding: 32px 22px 16px; }
-.about-logo { width: 56px; height: 56px; border-radius: 14px; margin: 0 auto 14px;
+header.about-bar { height: var(--topbar-h); display: flex; align-items: center; justify-content: space-between;
+  padding: 0 16px; background: var(--panel); border-bottom: 1px solid var(--line); }
+header.about-bar .logo-wrap { display: flex; align-items: center; gap: 10px; }
+header.about-bar .nav { display: flex; align-items: center; gap: 10px; }
+.about-main { max-width: 760px; margin: 0 auto; padding: 36px 22px 60px; }
+.about-card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: clamp(22px, 5vw, 44px); }
+.about-hero { text-align: center; margin-bottom: 40px; padding-bottom: 32px; border-bottom: 1px solid var(--line); }
+.about-hero .about-logo { width: 56px; height: 56px; border-radius: 14px; margin: 0 auto 16px;
   background: linear-gradient(90deg, var(--white-key) 0 14%, var(--black-key) 14% 20%, var(--white-key) 20% 34%,
     var(--black-key) 34% 40%, var(--white-key) 40% 60%, var(--black-key) 60% 66%, var(--white-key) 66% 80%,
     var(--black-key) 80% 86%, var(--white-key) 86% 100%); border-bottom: 5px solid var(--accent); }
-.about-title { text-align: center; font-size: 28px; margin: 0 0 6px; }
-.about-tagline { text-align: center; color: var(--accent); font-size: 16px; margin: 0 0 22px; }
-.about-wrap p { color: #c7ccd8; line-height: 1.65; font-size: 15.5px; margin: 0 0 14px; }
-.about-wrap b { color: var(--ink); }
-.btn-open { display: inline-block; margin-top: 8px; background: var(--accent); color: #07101f; font-weight: 650;
-  text-decoration: none; border-radius: 999px; padding: 12px 22px; }
-.site-footer { text-align: center; padding: 24px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); margin-top: 16px; }
+.about-hero h1 { font-size: 34px; font-weight: 800; letter-spacing: -0.5px; margin: 0 0 8px; }
+.about-tagline { font-size: 19px; font-weight: 600; color: var(--ink); margin: 0 0 6px; }
+.about-sub { font-size: 15px; color: var(--muted); margin: 0; }
+.about-section { margin-bottom: 40px; }
+.about-section h2 { font-size: 16px; font-weight: 700; margin: 0 0 14px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.04em; }
+.about-section p { font-size: 15px; line-height: 1.75; color: #c7ccd8; margin: 0 0 12px; }
+.about-section b { color: var(--ink); }
+.audience-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 560px) { .audience-grid { grid-template-columns: 1fr; } }
+.audience-item { background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+.audience-icon { font-size: 22px; margin-bottom: 8px; }
+.audience-label { font-size: 14px; font-weight: 700; color: var(--ink); margin-bottom: 6px; }
+.audience-desc { font-size: 13px; color: var(--muted); line-height: 1.6; }
+.why-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+@media (max-width: 600px) { .why-grid { grid-template-columns: 1fr; } }
+.why-item { background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+.why-title { font-size: 13px; font-weight: 700; color: var(--ink); margin-bottom: 6px; }
+.why-desc { font-size: 12.5px; color: var(--muted); line-height: 1.6; }
+.about-cta { text-align: center; margin: 40px 0 8px; }
+.process-btn { display: inline-block; text-decoration: none; padding: 14px 32px; background: var(--accent); color: #07101f;
+  border: none; border-radius: 999px; font-size: 16px; font-weight: 650; cursor: pointer; }
+.about-brand { margin-top: 30px; }
+.brand-divider { height: 1px; background: var(--line); margin-bottom: 18px; }
+.brand-line { font-size: 13px; color: var(--muted); text-align: center; }
+.brand-link { color: var(--muted); text-decoration: none; }
+.brand-link:hover { color: var(--accent); }
+.brand-sep { margin: 0 8px; }
+.site-footer { text-align: center; padding: 22px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); margin-top: 24px; }
 .site-footer a { color: var(--muted); text-decoration: none; }
 .site-footer a:hover { color: var(--ink); }
 .footer-sep { margin: 0 8px; }
+@media print {
+  body.about-page { background: #fff !important; color: #111 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  header.about-bar, .about-cta { display: none !important; }
+  .about-card { border: none !important; padding: 0 !important; background: #fff !important; }
+  .about-hero h1, .about-tagline, .about-section h2, .about-section p, .about-section b,
+  .audience-label, .audience-desc, .why-title, .why-desc, .brand-line { color: #111 !important; }
+  .audience-item, .why-item { background: #f5f5f5 !important; border-color: #ccc !important; }
+}
 
 /* ---- Song list ---- */
 .song-list { max-width: 680px; margin: 0 auto; padding: 12px; display: grid; gap: 8px; }
