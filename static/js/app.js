@@ -353,7 +353,8 @@
     kb = new window.Keyboard(kbEl, { startMidi: 60 });
     window._kb = kb;
 
-    const homeStart = (h) => (h === "right" ? 60 : 48); // C4 treble / C3 bass (Both starts at C3)
+    // The C your thumb anchors on: Right = middle C (C4), Left = an octave lower (C3).
+    const anchorC = (h) => (h === "left" ? 48 : 60);
     // ~real-piano white-key width. Calibrated for an 11" iPad; a touch smaller on
     // a phone so a useful span still fits.
     const targetKeyPx = (h) => (dev.tablet ? (h === "both" ? 70 : 112) : (h === "both" ? 50 : 80));
@@ -361,12 +362,17 @@
     function layout() {
       const w = kbEl.clientWidth || kbWrap.clientWidth || window.innerWidth;
       const whiteCount = Math.max(5, Math.min(22, Math.round(w / targetKeyPx(hand))));
-      let start = Math.max(24, Math.min(84, homeStart(hand) + shift * 12));
+      const home = anchorC(hand) + shift * 12;
+      // Single hand: place the home C 3 white keys in (leftmost = the G a fourth
+      // below), so the thumb sits a bit toward the middle with lower keys to its
+      // left. Both hands: span ~2 octaves centred near middle C.
+      let start = hand === "both" ? 48 + shift * 12 : home - 5;
+      start = Math.max(21, Math.min(96, start));
       kb.setWhiteRange(start, whiteCount);
-      octLabel.textContent = window.Theory.midiToName(start);
+      octLabel.textContent = window.Theory.midiToName(home);
       hint.textContent = hand === "both"
         ? "Both hands — a real two-hand span is wider than an iPad, so keys are a bit tighter. Pick Left or Right for full real-size keys."
-        : "Real-size keys for your " + hand + " hand — like a real piano. Use ▼ / ▲ to slide along the keyboard.";
+        : "Real-size keys — thumb on " + window.Theory.midiToName(home) + " for your " + hand + " hand. Use ▼ / ▲ to slide along the keyboard.";
     }
     function setHand(h) { hand = h; shift = 0; Object.entries(handBtns).forEach(([k, b]) => b.classList.toggle("active", k === h)); layout(); }
     function moveBy(d) { shift = Math.max(-2, Math.min(2, shift + d)); layout(); }
