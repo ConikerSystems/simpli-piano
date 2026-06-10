@@ -106,7 +106,7 @@
       el("div", { class: "site-footer", html:
         'Developed by <a href="https://conikersystems.com" target="_blank" rel="noopener">Coniker Systems™</a>'
         + '<span class="footer-sep">·</span>© 2026 Coniker Systems™'
-        + '<span class="footer-sep">·</span>v1.0' }),
+        + '<span class="footer-sep">·</span>v' + (window.APP_VERSION || "1.0") }),
     ]));
   }
 

@@ -9,6 +9,7 @@
   <link rel="icon" href="icons/favicon-32.png" sizes="32x32" />
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="stylesheet" href="static/css/style.css" />
+  <script src="static/js/version.js"></script>
 </head>
 <body class="about-page">
   <header class="about-bar">
@@ -116,10 +117,15 @@
           <a href="https://conikersystems.com" target="_blank" rel="noopener" class="brand-link">conikersystems.com</a>
           <span class="brand-sep">·</span>
           © 2026 Coniker Systems™
+          <span class="brand-sep">·</span>
+          v<span id="app-ver"></span>
         </div>
       </div>
 
     </div>
   </main>
+  <script>
+    document.getElementById("app-ver").textContent = window.APP_VERSION || "1.0";
+  </script>
 </body>
 </html>
