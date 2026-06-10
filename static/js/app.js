@@ -44,6 +44,18 @@
     if (window._active && window._active.stop) { try { window._active.stop(); } catch {} window._active = null; }
     view.innerHTML = "";
     window._kb = null;
+    window._relayout = null;
+  }
+
+  // Coarse device detection so the keyboard sizes sensibly per device.
+  // (iPadOS 13+ reports as "MacIntel" with touch points, so check that too.)
+  function deviceProfile() {
+    const ua = navigator.userAgent || "";
+    const ipad = /iPad/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    const iphone = /iPhone|iPod/.test(ua);
+    const minDim = Math.min(window.screen.width, window.screen.height);
+    const tablet = ipad || minDim >= 700;
+    return { ios: ipad || iphone, tablet, phone: iphone && !ipad };
   }
 
   // ---- Microphone toggle (shared by lessons + trainer) ------------------
@@ -301,23 +313,66 @@
   }
 
   // ---- Free play --------------------------------------------------------
+  // Real-piano-sized keys, calibrated to an 11" iPad and adapting per device.
+  // Pick a hand so keys stay finger-sized; a full two-hand span is wider than
+  // an 11" screen, so "Both" shows a slightly tighter, fully-visible layout.
   function freePlay() {
     clearView();
-    let start = 60, kb;
+    setChrome("Free Play", { back: true });
+    backBtn.onclick = home;
+
+    const dev = deviceProfile();
+    let hand = "right";    // left | both | right
+    let shift = 0;         // octave offset from the hand's home position
+    let kb;
+
     const kbEl = el("div", {});
+    const kbWrap = el("div", { class: "kb-wrap grow" }, kbEl);
+
+    const handBtns = {};
+    const seg = el("div", { class: "seg" });
+    [["left", "🤚 Left"], ["both", "🙌 Both"], ["right", "✋ Right"]].forEach(([h, label]) => {
+      const b = el("button", { class: "seg-btn" + (h === hand ? " active" : ""), onclick: () => setHand(h) }, label);
+      handBtns[h] = b; seg.append(b);
+    });
+
     const octLabel = el("span", { class: "tempo-val" }, "C4");
-    const setOct = (d) => { start = Math.min(96, Math.max(24, start + d)); kb.setRange(start, kb.octaves); octLabel.textContent = window.Theory.midiToName(start); };
-    const down = el("button", { class: "chip", onclick: () => setOct(-12) }, "–");
-    const up = el("button", { class: "chip", onclick: () => setOct(12) }, "+");
+    const down = el("button", { class: "chip", onclick: () => moveBy(-1) }, "▼ Lower");
+    const up = el("button", { class: "chip", onclick: () => moveBy(1) }, "Higher ▲");
     const labels = el("label", { class: "tempo" }, [
       el("input", { type: "checkbox", checked: "checked", onchange: (e) => kb.setLabels(e.target.checked) }),
       el("span", {}, "Labels"),
     ]);
-    setChrome("Free Play", { back: true, actions: [down, octLabel, up] });
-    backBtn.onclick = home;
-    view.append(el("div", { class: "lesson" }, [el("div", { class: "lesson-controls" }, [labels]), el("div", { class: "kb-wrap grow" }, kbEl)]));
-    kb = new window.Keyboard(kbEl, { startMidi: start });
+    const hint = el("div", { class: "lesson-status" });
+
+    view.append(el("div", { class: "lesson" }, [
+      el("div", { class: "lesson-controls" }, [seg, down, octLabel, up, labels]),
+      hint, kbWrap,
+    ]));
+
+    kb = new window.Keyboard(kbEl, { startMidi: 60 });
     window._kb = kb;
+
+    const homeStart = (h) => (h === "right" ? 60 : 48); // C4 treble / C3 bass (Both starts at C3)
+    // ~real-piano white-key width. Calibrated for an 11" iPad; a touch smaller on
+    // a phone so a useful span still fits.
+    const targetKeyPx = (h) => (dev.tablet ? (h === "both" ? 70 : 112) : (h === "both" ? 50 : 80));
+
+    function layout() {
+      const w = kbEl.clientWidth || kbWrap.clientWidth || window.innerWidth;
+      const whiteCount = Math.max(5, Math.min(22, Math.round(w / targetKeyPx(hand))));
+      let start = Math.max(24, Math.min(84, homeStart(hand) + shift * 12));
+      kb.setWhiteRange(start, whiteCount);
+      octLabel.textContent = window.Theory.midiToName(start);
+      hint.textContent = hand === "both"
+        ? "Both hands — a real two-hand span is wider than an iPad, so keys are a bit tighter. Pick Left or Right for full real-size keys."
+        : "Real-size keys for your " + hand + " hand — like a real piano. Use ▼ / ▲ to slide along the keyboard.";
+    }
+    function setHand(h) { hand = h; shift = 0; Object.entries(handBtns).forEach(([k, b]) => b.classList.toggle("active", k === h)); layout(); }
+    function moveBy(d) { shift = Math.max(-2, Math.min(2, shift + d)); layout(); }
+
+    layout();
+    window._relayout = layout; // recompute key count on resize/orientation change
   }
 
   // ---- Song editor ------------------------------------------------------
@@ -391,7 +446,10 @@
     window.removeEventListener("pointerdown", unlock);
   });
   let rt = null;
-  window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { if (window._kb && !window._kb.fixedRange) window._kb.render(); }, 150); });
+  window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => {
+    if (window._relayout) window._relayout();
+    else if (window._kb && !window._kb.fixedRange) window._kb.render();
+  }, 150); });
   if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
 
   home();

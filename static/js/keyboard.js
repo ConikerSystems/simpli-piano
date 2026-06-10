@@ -43,6 +43,7 @@
       this.startMidi = opts.startMidi ?? 60;    // C4
       this.octaves = opts.octaves ?? null;      // null => auto-fit to width
       this.fixedRange = opts.octaves != null;
+      this.whiteCount = opts.whiteCount ?? null; // explicit white-key count (Free Play hand modes)
       this.keyEls = new Map();                  // midi -> element
       this.pointerNote = new Map();             // pointerId -> midi
       this.el.classList.add("keyboard");
@@ -61,6 +62,16 @@
       this.startMidi = startMidi;
       this.octaves = octaves;
       this.fixedRange = true;
+      this.whiteCount = null;
+      this.render();
+    }
+
+    /* Show an exact number of white keys from startMidi (Free Play hand modes,
+       so keys can be sized to real-piano width). */
+    setWhiteRange(startMidi, whiteCount) {
+      this.startMidi = startMidi;
+      this.whiteCount = whiteCount;
+      this.fixedRange = false;
       this.render();
     }
 
@@ -70,38 +81,44 @@
     }
 
     render() {
-      const octaves = this.fixedRange ? (this.octaves || 2) : this._autoOctaves();
-      this.octaves = octaves;
+      // Decide how many white keys to draw: explicit count, a fixed octave
+      // range (lessons), or auto-fit to the width (default).
+      let whiteCount;
+      if (this.whiteCount != null) whiteCount = this.whiteCount;
+      else if (this.fixedRange) { whiteCount = (this.octaves || 2) * 7 + 1; }
+      else whiteCount = this._autoOctaves() * 7 + 1;
+
       this.el.innerHTML = "";
       this.el.classList.toggle("no-labels", !this.showLabels);
       this.keyEls = new Map();
 
-      const total = octaves * 12 + 1; // end on a C
-      const whiteMidis = [];
-      for (let i = 0; i < total; i++) {
-        const m = this.startMidi + i;
+      // Collect midis from startMidi until we have `whiteCount` white keys.
+      const whiteMidis = [], all = [];
+      let m = this.startMidi;
+      while (whiteMidis.length < whiteCount) {
+        all.push(m);
         if (isWhite(m)) whiteMidis.push(m);
+        m++;
       }
       this._whiteCount = whiteMidis.length;
       this._whiteIndex = new Map();
 
-      whiteMidis.forEach((m, idx) => {
-        this._whiteIndex.set(m, idx);
-        this.el.appendChild(this._makeKey(m, "white"));
+      whiteMidis.forEach((mm, idx) => {
+        this._whiteIndex.set(mm, idx);
+        this.el.appendChild(this._makeKey(mm, "white"));
       });
 
-      for (let i = 0; i < total; i++) {
-        const m = this.startMidi + i;
-        if (isWhite(m)) continue;
-        const idx = this._whiteIndex.get(m - 1);
-        if (idx === undefined) continue;
-        const el = this._makeKey(m, "black");
+      all.forEach((mm) => {
+        if (isWhite(mm)) return;
+        const idx = this._whiteIndex.get(mm - 1);
+        if (idx === undefined) return;
+        const el = this._makeKey(mm, "black");
         const unit = 100 / this._whiteCount;
         const bw = unit * 0.62;
         el.style.width = bw + "%";
         el.style.left = (unit * (idx + 1) - bw / 2) + "%";
         this.el.appendChild(el);
-      }
+      });
     }
 
     _makeKey(midi, kind) {
