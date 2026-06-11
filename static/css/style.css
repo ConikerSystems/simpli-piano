@@ -279,7 +279,9 @@ a.chip { text-decoration: none; display: inline-flex; align-items: center; }
 .completed .song-list { padding-top: 4px; }
 
 /* ---- Course path ---- */
-.song-row.locked { opacity: 0.5; cursor: default; }
+.song-row.locked { opacity: 0.62; cursor: pointer; }
+.song-row.locked:active { opacity: 0.85; }
+.unlock-hint { color: var(--accent); font-size: 13px; white-space: nowrap; }
 .song-dot.unit { background: #2a3654; color: var(--accent); }
 .song-dot.unit.done { background: #2f3a2a; color: #9fd07f; }
 

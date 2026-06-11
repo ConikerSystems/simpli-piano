@@ -82,26 +82,36 @@
     const load = () => { try { return JSON.parse(localStorage.getItem(KEY())) || {}; } catch { return {}; } };
     function entry(id) {
       const e = load()[id];
-      if (e == null) return { stars: 0, complete: false };
-      if (typeof e === "number") return { stars: e, complete: e > 0 }; // legacy
-      return { stars: e.stars || 0, complete: !!e.complete };
+      if (e == null) return { stars: 0, complete: false, unlocked: false };
+      if (typeof e === "number") return { stars: e, complete: e > 0, unlocked: false }; // legacy
+      return { stars: e.stars || 0, complete: !!e.complete, unlocked: !!e.unlocked };
     }
     function complete(unitId, stars, accuracy) {
       const c = load();
       const prev = entry(unitId);
       const nowComplete = prev.complete || (accuracy != null && accuracy >= PASS);
-      c[unitId] = { stars: Math.max(prev.stars, stars || 0), complete: nowComplete };
+      c[unitId] = { stars: Math.max(prev.stars, stars || 0), complete: nowComplete, unlocked: prev.unlocked || nowComplete };
       localStorage.setItem(KEY(), JSON.stringify(c));
       return nowComplete;
     }
+    // Manual unlock — lets a learner (e.g. after reinstalling) start at any lesson
+    // and then continue forward on the normal path from there.
+    function unlock(unitId) {
+      const c = load();
+      const prev = entry(unitId);
+      c[unitId] = { stars: prev.stars, complete: prev.complete, unlocked: true };
+      localStorage.setItem(KEY(), JSON.stringify(c));
+    }
     const starsFor = (id) => entry(id).stars;
     const isComplete = (id) => entry(id).complete;
-    function unlocked(index) { return index <= 0 || isComplete(units[index - 1].id); }
+    function unlocked(index) {
+      return index <= 0 || entry(units[index].id).unlocked || isComplete(units[index - 1].id);
+    }
     function nextIndex() {
       for (let i = 0; i < units.length; i++) if (unlocked(i) && !isComplete(units[i].id)) return i;
       return -1;
     }
-    return { CURRICULUM: units, TIERS: tiers, PASS, complete, starsFor, isComplete, unlocked, nextIndex };
+    return { CURRICULUM: units, TIERS: tiers, PASS, complete, starsFor, isComplete, unlocked, unlock, nextIndex };
   }
 
   window.Course = makeTrack(SOLOIST, "piano.course", SOLOIST_TIERS);

@@ -236,17 +236,26 @@
     const wrap = el("div", { class: "course-wrap" });
 
     const unitIcon = (u) => (u.type === "song" ? "♪" : u.type === "trainer" ? "📖" : "🎹");
-    const unitRow = (u, i, done) => el("button", {
-      class: "song-row" + (!done && !C.unlocked(i) ? " locked" : ""),
-      onclick: (!done && !C.unlocked(i)) ? null : () => launchUnit(track, i, back),
-    }, [
-      el("span", { class: "song-dot unit" + (done ? " done" : "") }, !done && !C.unlocked(i) ? "🔒" : done ? "✓" : unitIcon(u)),
-      el("span", { class: "song-meta" }, [
-        el("span", { class: "song-title" }, u.title),
-        el("span", { class: "song-sub" }, u.blurb),
-      ]),
-      el("span", { class: "song-stars" }, C.starsFor(u.id) ? starRow(C.starsFor(u.id)) : ""),
-    ]);
+    const askUnlock = (u) => {
+      if (confirm("Unlock “" + u.title + "”?\n\nYou can start here and continue forward on the normal path from this point.")) {
+        C.unlock(u.id);
+        back();
+      }
+    };
+    const unitRow = (u, i, done) => {
+      const locked = !done && !C.unlocked(i);
+      return el("button", {
+        class: "song-row" + (locked ? " locked" : ""),
+        onclick: locked ? () => askUnlock(u) : () => launchUnit(track, i, back),
+      }, [
+        el("span", { class: "song-dot unit" + (done ? " done" : "") }, locked ? "🔒" : done ? "✓" : unitIcon(u)),
+        el("span", { class: "song-meta" }, [
+          el("span", { class: "song-title" }, u.title),
+          el("span", { class: "song-sub" }, u.blurb),
+        ]),
+        el("span", { class: "song-stars" + (locked ? " unlock-hint" : "") }, locked ? "🔓 Unlock" : (C.starsFor(u.id) ? starRow(C.starsFor(u.id)) : "")),
+      ]);
+    };
 
     // 1) Next up — the most prominent thing on the screen.
     const ni = C.nextIndex();
