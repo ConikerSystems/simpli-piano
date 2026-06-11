@@ -110,19 +110,17 @@
 
       <section class="about-section" id="get-it">
         <h2>Get Simpli Piano on Your iPad</h2>
-        <p>It's a free web app — nothing to buy, no App Store needed. Here's how to add it to your
-           iPad or iPhone so it opens like a normal app and works offline:</p>
-        <div class="get-url">
-          <span class="get-url-link" id="app-url">https://jconiker.github.io/simpli-piano/</span>
-          <button class="chip" id="copy-url">Copy link</button>
-        </div>
+        <p>It's a free web app — nothing to buy, no App Store needed. To keep it on your iPad or
+           iPhone so it opens like a normal app and works offline:</p>
         <ol class="get-steps">
-          <li>Open that link in <b>Safari</b> on your iPad or iPhone.</li>
-          <li>Tap the <b>Share</b> button (the square with an arrow at the top).</li>
+          <li>In <b>Safari</b> (you're likely here already), tap the <b>Share</b> button — the square with an arrow.</li>
           <li>Choose <b>“Add to Home Screen.”</b></li>
           <li>Tap <b>Add</b> — a Simpli Piano icon appears on your home screen.</li>
           <li>Open it from the home screen. It runs full-screen and <b>works offline</b>.</li>
         </ol>
+        <div class="about-cta">
+          <a class="process-btn" href="index.html">▶ Start Playing</a>
+        </div>
         <p class="get-tip">Want to send it to someone? Tap <b>Share</b> at the top of this page to
            text or email them the link and these instructions.</p>
 
@@ -133,10 +131,6 @@
         <p>Have an idea or found a problem? Tap <b>💬 Feedback</b> on the home screen to send it
            straight to us — your feedback shapes what gets built next.</p>
       </section>
-
-      <div class="about-cta">
-        <a class="process-btn" href="index.html">Start playing →</a>
-      </div>
 
       <div class="about-brand">
         <div class="brand-divider"></div>
@@ -171,11 +165,6 @@
       // No share sheet (e.g. desktop): offer SMS, else copy the link.
       try { await navigator.clipboard.writeText(SHARE_TEXT); alert("Link copied — paste it into a text or email."); }
       catch (e) { window.location.href = "sms:?&body=" + encodeURIComponent(SHARE_TEXT); }
-    };
-
-    document.getElementById("copy-url").onclick = async function () {
-      try { await navigator.clipboard.writeText(APP_URL); this.textContent = "Copied!"; }
-      catch (e) { window.prompt("Copy this link:", APP_URL); }
     };
 
     // Download PDF — NEVER navigate the window (in a Home-Screen app that traps
