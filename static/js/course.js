@@ -31,11 +31,11 @@
     { id: "u18", title: "Jingle Bells", blurb: "Bring it together", type: "song", song: "jingle-bells", mode: "step" },
   ];
 
-  const KEY = "piano.course";
-  const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } };
+  const KEY = () => (window.Profiles ? window.Profiles.key("piano.course") : "piano.course");
+  const load = () => { try { return JSON.parse(localStorage.getItem(KEY())) || {}; } catch { return {}; } };
   function complete(unitId, stars) {
     const c = load();
-    if (!c[unitId] || stars > c[unitId]) { c[unitId] = stars; localStorage.setItem(KEY, JSON.stringify(c)); }
+    if (!c[unitId] || stars > c[unitId]) { c[unitId] = stars; localStorage.setItem(KEY(), JSON.stringify(c)); }
   }
   const starsFor = (unitId) => load()[unitId] || 0;
 

@@ -139,6 +139,28 @@ header.about-bar .nav { display: flex; align-items: center; gap: 10px; }
   .audience-item, .why-item { background: #f5f5f5 !important; border-color: #ccc !important; }
 }
 
+/* ---- Players / profiles ---- */
+.player-chip { display: inline-flex; align-items: center; gap: 8px; margin: 0 auto 14px; padding: 8px 16px; border-radius: 999px; background: var(--panel); border: 1px solid var(--line); color: var(--ink); font-size: 15px; cursor: pointer; }
+.player-chip .profile-emoji { font-size: 18px; }
+.player-chip .swap { color: var(--muted); }
+.profiles { max-width: 620px; margin: 0 auto; padding: 26px 18px; text-align: center; }
+.profiles-title { font-size: 24px; margin: 0 0 6px; }
+.profiles-sub { color: var(--muted); margin: 0 0 22px; font-size: 14px; }
+.profiles-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 14px; }
+.profile-card { position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 22px 12px; border-radius: 14px; background: var(--panel); border: 1px solid var(--line); color: var(--ink); cursor: pointer; }
+.profile-card.active { border-color: var(--accent); }
+.profile-card.add { border-style: dashed; color: var(--muted); }
+.profile-emoji { font-size: 38px; line-height: 1; }
+.profile-name { font-size: 15px; font-weight: 600; }
+.profile-del { position: absolute; top: 6px; right: 8px; color: var(--muted); font-size: 13px; padding: 2px 6px; }
+.profile-del:hover { color: var(--bad); }
+.profile-create { margin-top: 22px; padding: 18px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); text-align: left; }
+.create-label { font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; }
+.profile-create .field { margin-bottom: 12px; }
+.emoji-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.emoji-pick { width: 44px; height: 44px; font-size: 22px; border-radius: 10px; background: var(--panel-2); border: 1px solid var(--line); cursor: pointer; }
+.emoji-pick.active { border-color: var(--accent); background: #243049; }
+
 /* ---- Song list ---- */
 .song-list { max-width: 680px; margin: 0 auto; padding: 12px; display: grid; gap: 8px; }
 .group-head { font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin: 16px 4px 2px; }

@@ -9,12 +9,12 @@
   const backBtn = document.getElementById("back-btn");
   const actionsEl = document.getElementById("topbar-actions");
 
-  // ---- Progress (localStorage) -----------------------------------------
-  const PROG_KEY = "piano.progress";
-  const loadProgress = () => { try { return JSON.parse(localStorage.getItem(PROG_KEY)) || {}; } catch { return {}; } };
+  // ---- Progress (localStorage, per active player) ----------------------
+  const progKey = () => window.Profiles.key("piano.progress");
+  const loadProgress = () => { try { return JSON.parse(localStorage.getItem(progKey())) || {}; } catch { return {}; } };
   const saveStars = (songId, stars) => {
     const p = loadProgress();
-    if (!p[songId] || stars > p[songId].stars) { p[songId] = { stars }; localStorage.setItem(PROG_KEY, JSON.stringify(p)); }
+    if (!p[songId] || stars > p[songId].stars) { p[songId] = { stars }; localStorage.setItem(progKey(), JSON.stringify(p)); }
   };
   const starsFor = (songId) => (loadProgress()[songId]?.stars || 0);
   const starRow = (n) => "★★★".slice(0, n) + "☆☆☆".slice(0, 3 - n);
@@ -107,6 +107,67 @@
     };
   }
 
+  // ---- Players (profiles) ----------------------------------------------
+  function start() {
+    if (!window.Profiles.activeId()) profilePicker();
+    else home();
+  }
+
+  function profilePicker() {
+    clearView();
+    const hasActive = !!window.Profiles.activeId();
+    setChrome("Players", { back: hasActive });
+    backBtn.onclick = home;
+
+    const list = window.Profiles.all();
+    const wrap = el("div", { class: "profiles" }, [
+      el("h2", { class: "profiles-title" }, list.length ? "Who's playing?" : "Welcome to Simpli Piano"),
+      el("p", { class: "profiles-sub" }, "Your stars and progress are saved just for you. Up to 5 players on this device."),
+    ]);
+    const grid = el("div", { class: "profiles-grid" });
+    list.forEach((p) => {
+      grid.append(el("button", { class: "profile-card" + (p.id === window.Profiles.activeId() ? " active" : ""),
+        onclick: () => { window.Profiles.setActive(p.id); home(); } }, [
+        el("span", { class: "profile-emoji" }, p.emoji),
+        el("span", { class: "profile-name" }, p.name),
+        el("span", { class: "profile-del", title: "Remove player",
+          onclick: (e) => { e.stopPropagation(); if (confirm("Remove " + p.name + " and their progress?")) { window.Profiles.remove(p.id); profilePicker(); } } }, "✕"),
+      ]));
+    });
+    if (window.Profiles.canAdd()) {
+      grid.append(el("button", { class: "profile-card add", onclick: () => showCreate(wrap) }, [
+        el("span", { class: "profile-emoji" }, "＋"),
+        el("span", { class: "profile-name" }, "Add player"),
+      ]));
+    }
+    wrap.append(grid);
+    view.append(wrap);
+    if (!list.length) showCreate(wrap); // first run → go straight to create
+  }
+
+  function showCreate(wrap) {
+    if (wrap.querySelector(".profile-create")) return;
+    let emoji = window.Profiles.EMOJIS[0];
+    const name = el("input", { type: "text", class: "field", placeholder: "Type a name", maxlength: "14", value: "" });
+    const emojiRow = el("div", { class: "emoji-row" });
+    window.Profiles.EMOJIS.forEach((e, i) => {
+      const b = el("button", { class: "emoji-pick" + (i === 0 ? " active" : ""), onclick: () => {
+        emoji = e; emojiRow.querySelectorAll(".emoji-pick").forEach((x) => x.classList.remove("active")); b.classList.add("active");
+      } }, e);
+      emojiRow.append(b);
+    });
+    const create = el("div", { class: "profile-create" }, [
+      el("div", { class: "create-label" }, "New player"),
+      name, emojiRow,
+      el("button", { class: "chip play", onclick: () => {
+        const p = window.Profiles.add(name.value || "Player", emoji);
+        if (p) home();
+      } }, "Create player"),
+    ]);
+    wrap.append(create);
+    name.focus();
+  }
+
   // ---- Home -------------------------------------------------------------
   function courseProgressText() {
     const total = window.Course.CURRICULUM.length;
@@ -122,7 +183,13 @@
         el("span", { class: "tile-label" }, label),
         el("span", { class: "tile-sub" }, sub),
       ]);
+    const me = window.Profiles.active();
     view.append(el("div", { class: "home" }, [
+      me ? el("button", { class: "player-chip", onclick: () => profilePicker() }, [
+        el("span", { class: "profile-emoji" }, me.emoji),
+        el("span", {}, me.name),
+        el("span", { class: "swap" }, "⇄"),
+      ]) : null,
       el("p", { class: "tagline" }, "Learn piano the simple way — follow the falling notes."),
       el("p", { class: "home-hint" }, "New to piano? Start with Course → “Meet the Keys.”"),
       el("div", { class: "tiles" }, [
@@ -413,8 +480,10 @@
       const start = Math.max(21, Math.min(96, home - 5));
       kb.setWhiteRange(start, whiteCount);
       octLabel.textContent = window.Theory.midiToName(home);
-      hint.textContent = "Real-size keys — thumb on " + window.Theory.midiToName(home)
+      let msg = "Real-size keys — thumb on " + window.Theory.midiToName(home)
         + " for your " + hand + " hand. Use ▼ / ▲ to slide along the keyboard.";
+      if (dev.phone && window.innerHeight > window.innerWidth) msg += "  Turn your phone sideways for more keys.";
+      hint.textContent = msg;
     }
     function setHand(h) { hand = h; shift = 0; Object.entries(handBtns).forEach(([k, b]) => b.classList.toggle("active", k === h)); layout(); }
     function moveBy(d) { shift = Math.max(-2, Math.min(2, shift + d)); layout(); }
@@ -501,5 +570,5 @@
   if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
 
   initChrome();
-  home();
+  start();
 })();
