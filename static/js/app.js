@@ -108,6 +108,11 @@
   }
 
   // ---- Home -------------------------------------------------------------
+  function courseProgressText() {
+    const total = window.Course.CURRICULUM.length;
+    const done = window.Course.CURRICULUM.filter((u) => window.Course.starsFor(u.id) > 0).length;
+    return done ? done + " of " + total + " lessons done — keep going!" : "Step-by-step lessons for beginners";
+  }
   function home() {
     clearView();
     setChrome("Simpli&nbsp;Piano", { back: false });
@@ -121,8 +126,8 @@
       el("p", { class: "tagline" }, "Learn piano the simple way — follow the falling notes."),
       el("p", { class: "home-hint" }, "New to piano? Start with Course → “Meet the Keys.”"),
       el("div", { class: "tiles" }, [
-        tile("🎓  Course", "Step-by-step lessons", () => courseView(), "primary"),
-        tile("🎵  Songs", "Guided play-along", () => songList()),
+        tile("🎓  Course", courseProgressText(), () => courseView(), "primary"),
+        tile("🎵  Songs", window.Songs.all().length + " songs to play", () => songList()),
         tile("📖  Read Notes", "Note-reading practice", () => trainerView()),
         tile("🎹  Free Play", "Just play around", () => freePlay()),
         tile("✏️  Add a Song", "Type in your own", () => editor()),
@@ -167,28 +172,43 @@
       trainerView({
         title: u.title, returnTo: courseView, onDone, goal: u.goal,
         displayMode: u.type === "keyfind" ? "name" : "staff",
-        fixedNotes: u.type === "keyfind" ? u.notes : window.Trainer.LEVELS[u.level],
+        fixedNotes: u.type === "keyfind" ? u.notes : (u.fixedNotes || window.Trainer.LEVELS[u.level]),
         prompt: u.type === "keyfind" ? "Find the key" : "Name the note",
       });
     }
   }
 
-  // ---- Song list --------------------------------------------------------
+  // ---- Song list (grouped by difficulty, like Simply Piano's library) ---
   function songList() {
     clearView();
     setChrome("Songs", { back: true });
     backBtn.onclick = home;
     const list = el("div", { class: "song-list" });
-    window.Songs.all().forEach((song) => {
+
+    const songRow = (song) => {
       const stars = starsFor(song.id);
-      list.append(el("button", { class: "song-row", onclick: () => lesson(song.id) }, [
+      return el("button", { class: "song-row", onclick: () => lesson(song.id) }, [
         el("span", { class: "song-dot diff-" + song.difficulty }, "♪"),
         el("span", { class: "song-meta" }, [
           el("span", { class: "song-title" }, song.title + (song.user ? "  ·  yours" : "")),
-          el("span", { class: "song-sub" }, "Level " + song.difficulty + " · " + song.notes.length + " notes"),
+          el("span", { class: "song-sub" }, song.notes.length + " notes"),
         ]),
         el("span", { class: "song-stars" }, starRow(stars)),
-      ]));
+      ]);
+    };
+
+    const all = window.Songs.all();
+    const groups = [
+      { name: "Beginner", test: (s) => !s.user && s.difficulty <= 1 },
+      { name: "Easy", test: (s) => !s.user && s.difficulty === 2 },
+      { name: "A bit more", test: (s) => !s.user && s.difficulty >= 3 },
+      { name: "Your songs", test: (s) => s.user },
+    ];
+    groups.forEach((g) => {
+      const songs = all.filter(g.test);
+      if (!songs.length) return;
+      list.append(el("h3", { class: "group-head" }, g.name));
+      songs.forEach((s) => list.append(songRow(s)));
     });
     view.append(list);
   }
@@ -355,7 +375,7 @@
 
     const handBtns = {};
     const seg = el("div", { class: "seg" });
-    [["left", "🤚 Left"], ["both", "🙌 Both"], ["right", "✋ Right"]].forEach(([h, label]) => {
+    [["left", "🤚 Left hand"], ["right", "✋ Right hand"]].forEach(([h, label]) => {
       const b = el("button", { class: "seg-btn" + (h === hand ? " active" : ""), onclick: () => setHand(h) }, label);
       handBtns[h] = b; seg.append(b);
     });
@@ -381,24 +401,20 @@
 
     // The C your thumb anchors on: Right = middle C (C4), Left = an octave lower (C3).
     const anchorC = (h) => (h === "left" ? 48 : 60);
-    // ~real-piano white-key width. Calibrated for an 11" iPad; a touch smaller on
-    // a phone so a useful span still fits.
-    const targetKeyPx = (h) => (dev.tablet ? (h === "both" ? 70 : 112) : (h === "both" ? 50 : 80));
+    // ~real-piano white-key width. Calibrated for an 11" iPad; a touch smaller on a phone.
+    const targetKeyPx = () => (dev.tablet ? 112 : 80);
 
     function layout() {
       const w = kbEl.clientWidth || kbWrap.clientWidth || window.innerWidth;
-      const whiteCount = Math.max(5, Math.min(22, Math.round(w / targetKeyPx(hand))));
+      const whiteCount = Math.max(5, Math.min(22, Math.round(w / targetKeyPx())));
       const home = anchorC(hand) + shift * 12;
-      // Single hand: place the home C 3 white keys in (leftmost = the G a fourth
-      // below), so the thumb sits a bit toward the middle with lower keys to its
-      // left. Both hands: span ~2 octaves centred near middle C.
-      let start = hand === "both" ? 48 + shift * 12 : home - 5;
-      start = Math.max(21, Math.min(96, start));
+      // Place the home C 3 white keys in (leftmost = the G a fourth below) so the
+      // thumb sits a bit toward the middle with lower keys to its left.
+      const start = Math.max(21, Math.min(96, home - 5));
       kb.setWhiteRange(start, whiteCount);
       octLabel.textContent = window.Theory.midiToName(home);
-      hint.textContent = hand === "both"
-        ? "Both hands — a real two-hand span is wider than an iPad, so keys are a bit tighter. Pick Left or Right for full real-size keys."
-        : "Real-size keys — thumb on " + window.Theory.midiToName(home) + " for your " + hand + " hand. Use ▼ / ▲ to slide along the keyboard.";
+      hint.textContent = "Real-size keys — thumb on " + window.Theory.midiToName(home)
+        + " for your " + hand + " hand. Use ▼ / ▲ to slide along the keyboard.";
     }
     function setHand(h) { hand = h; shift = 0; Object.entries(handBtns).forEach(([k, b]) => b.classList.toggle("active", k === h)); layout(); }
     function moveBy(d) { shift = Math.max(-2, Math.min(2, shift + d)); layout(); }

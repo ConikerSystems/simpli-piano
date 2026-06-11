@@ -19,6 +19,7 @@
     </div>
     <div class="nav">
       <a class="chip" href="index.html">← Back</a>
+      <button class="chip" id="share-btn">📤 Share</button>
       <button class="chip" onclick="window.print()">Download PDF</button>
     </div>
   </header>
@@ -38,8 +39,8 @@
         <p>Simpli Piano shows you which note to play, you play it, and it tells you right away
            whether you got it — so you learn as you go. Every note appears <b>two ways at once</b>:
            on the music staff <i>and</i> lit up on the on-screen piano, so you learn where each note lives.</p>
-        <p>You can play on a <b>real piano or keyboard</b> and let the app <b>listen through the
-           microphone</b> and grade your notes, or simply <b>tap the keys on the screen</b>.</p>
+        <p>You can play on a <b>real piano</b> and let the app <b>listen through the microphone</b>
+           and grade your notes, or play right <b>on your iPad</b> by tapping the keys on the screen.</p>
       </section>
 
       <section class="about-section">
@@ -105,6 +106,25 @@
            progress stays with you.</p>
       </section>
 
+      <section class="about-section" id="get-it">
+        <h2>Get Simpli Piano on Your iPad</h2>
+        <p>It's a free web app — nothing to buy, no App Store needed. Here's how to add it to your
+           iPad or iPhone so it opens like a normal app and works offline:</p>
+        <div class="get-url">
+          <span class="get-url-link" id="app-url">https://jconiker.github.io/simpli-piano/</span>
+          <button class="chip" id="copy-url">Copy link</button>
+        </div>
+        <ol class="get-steps">
+          <li>Open that link in <b>Safari</b> on your iPad or iPhone.</li>
+          <li>Tap the <b>Share</b> button (the square with an arrow at the top).</li>
+          <li>Choose <b>“Add to Home Screen.”</b></li>
+          <li>Tap <b>Add</b> — a Simpli Piano icon appears on your home screen.</li>
+          <li>Open it from the home screen. It runs full-screen and <b>works offline</b>.</li>
+        </ol>
+        <p class="get-tip">Want to send it to someone? Tap <b>Share</b> at the top of this page to
+           text or email them the link and these instructions.</p>
+      </section>
+
       <div class="about-cta">
         <a class="process-btn" href="index.html">Start playing →</a>
       </div>
@@ -126,6 +146,24 @@
   </main>
   <script>
     document.getElementById("app-ver").textContent = window.APP_VERSION || "1.0";
+
+    var APP_URL = "https://jconiker.github.io/simpli-piano/";
+    var SHARE_TEXT = "Simpli Piano — learn piano on your iPad. Open this link in Safari, "
+      + "tap Share, then \"Add to Home Screen\":\n" + APP_URL;
+
+    document.getElementById("share-btn").onclick = async function () {
+      if (navigator.share) {
+        try { await navigator.share({ title: "Simpli Piano", text: SHARE_TEXT, url: APP_URL }); return; } catch (e) { return; }
+      }
+      // No share sheet (e.g. desktop): offer SMS, else copy the link.
+      try { await navigator.clipboard.writeText(SHARE_TEXT); alert("Link copied — paste it into a text or email."); }
+      catch (e) { window.location.href = "sms:?&body=" + encodeURIComponent(SHARE_TEXT); }
+    };
+
+    document.getElementById("copy-url").onclick = async function () {
+      try { await navigator.clipboard.writeText(APP_URL); this.textContent = "Copied!"; }
+      catch (e) { window.prompt("Copy this link:", APP_URL); }
+    };
   </script>
 </body>
 </html>
