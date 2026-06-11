@@ -207,39 +207,87 @@
     ]));
   }
 
-  // ---- Course path ------------------------------------------------------
+  // ---- Course (next-up prominent · tiers · completed collapsed) ---------
   function courseView() {
     clearView();
     setChrome("Course", { back: true });
     backBtn.onclick = home;
-    const list = el("div", { class: "song-list course" });
-    window.Course.CURRICULUM.forEach((u, i) => {
-      const open = window.Course.unlocked(i);
-      const stars = window.Course.starsFor(u.id);
-      const icon = !open ? "🔒" : stars ? "✓" : (u.type === "song" ? "♪" : u.type === "trainer" ? "📖" : "🎹");
-      const row = el("button", { class: "song-row" + (open ? "" : " locked"), onclick: open ? () => launchUnit(i) : null }, [
-        el("span", { class: "song-dot unit" + (stars ? " done" : "") }, icon),
-        el("span", { class: "song-meta" }, [
-          el("span", { class: "song-title" }, (i + 1) + ". " + u.title),
-          el("span", { class: "song-sub" }, u.blurb),
+    const C = window.Course;
+    const wrap = el("div", { class: "course-wrap" });
+
+    const unitIcon = (u) => (u.type === "song" ? "♪" : u.type === "trainer" ? "📖" : "🎹");
+    const unitRow = (u, i, done) => el("button", {
+      class: "song-row" + (!done && !C.unlocked(i) ? " locked" : ""),
+      onclick: (!done && !C.unlocked(i)) ? null : () => launchUnit(i),
+    }, [
+      el("span", { class: "song-dot unit" + (done ? " done" : "") }, !done && !C.unlocked(i) ? "🔒" : done ? "✓" : unitIcon(u)),
+      el("span", { class: "song-meta" }, [
+        el("span", { class: "song-title" }, u.title),
+        el("span", { class: "song-sub" }, u.blurb),
+      ]),
+      el("span", { class: "song-stars" }, C.starsFor(u.id) ? starRow(C.starsFor(u.id)) : ""),
+    ]);
+
+    // 1) Next up — the most prominent thing on the screen.
+    const ni = C.nextIndex();
+    if (ni >= 0) {
+      const u = C.CURRICULUM[ni];
+      wrap.append(el("div", { class: "next-up" }, [
+        el("div", { class: "next-label" }, "NEXT UP"),
+        el("button", { class: "next-card", onclick: () => launchUnit(ni) }, [
+          el("span", { class: "next-icon" }, unitIcon(u)),
+          el("span", { class: "next-meta" }, [
+            el("span", { class: "next-title" }, u.title),
+            el("span", { class: "next-blurb" }, u.blurb + "  ·  reach 80% to pass"),
+          ]),
+          el("span", { class: "next-go" }, "▶"),
         ]),
-        el("span", { class: "song-stars" }, stars ? starRow(stars) : ""),
-      ]);
-      list.append(row);
+      ]));
+    } else {
+      wrap.append(el("div", { class: "next-up" }, el("div", { class: "next-done" }, "🎉 You've completed every lesson! Replay any below.")));
+    }
+
+    // 2) The path, grouped by tier — upcoming (not-complete) units shown openly.
+    C.TIERS.forEach((tier) => {
+      const idxs = C.CURRICULUM.map((u, i) => i).filter((i) => C.CURRICULUM[i].level === tier.id && !C.isComplete(C.CURRICULUM[i].id));
+      if (tier.id === "advanced" && !C.CURRICULUM.some((u) => u.level === "advanced")) {
+        wrap.append(el("h3", { class: "group-head" }, tier.name));
+        wrap.append(el("div", { class: "coming-soon" }, "Coming soon — more lessons on the way."));
+        return;
+      }
+      if (!idxs.length) return;
+      wrap.append(el("h3", { class: "group-head" }, tier.name));
+      const list = el("div", { class: "song-list course" });
+      idxs.forEach((i) => list.append(unitRow(C.CURRICULUM[i], i, false)));
+      wrap.append(list);
     });
-    view.append(list);
+
+    // 3) Completed — grouped, collapsed, replayable.
+    const doneIdxs = C.CURRICULUM.map((u, i) => i).filter((i) => C.isComplete(C.CURRICULUM[i].id));
+    if (doneIdxs.length) {
+      const list = el("div", { class: "song-list course" });
+      doneIdxs.forEach((i) => list.append(unitRow(C.CURRICULUM[i], i, true)));
+      wrap.append(el("details", { class: "completed" }, [
+        el("summary", {}, "✓ Completed (" + doneIdxs.length + ") — tap to review or redo"),
+        list,
+      ]));
+    }
+
+    view.append(wrap);
   }
 
   function launchUnit(i) {
     const u = window.Course.CURRICULUM[i];
-    const onDone = (res) => window.Course.complete(u.id, res.stars || 1);
+    const onDone = (res) => window.Course.complete(u.id, res.stars || 0, res.accuracy);
     if (u.type === "song") {
-      lesson(u.song, { mode: u.mode, onDone, returnTo: courseView, courseTitle: u.title });
+      lesson(u.song, { mode: u.mode, onDone, returnTo: courseView, courseTitle: u.title, passMark: window.Course.PASS });
     } else {
       trainerView({
-        title: u.title, returnTo: courseView, onDone, goal: u.goal,
+        title: u.title, returnTo: courseView, onDone, goal: u.goal, passMark: window.Course.PASS,
         displayMode: u.type === "keyfind" ? "name" : "staff",
-        fixedNotes: u.type === "keyfind" ? u.notes : (u.fixedNotes || window.Trainer.LEVELS[u.level]),
+        clef: u.clef || "treble",
+        kbStart: u.kbStart, kbOctaves: u.kbOctaves,
+        fixedNotes: u.type === "keyfind" ? u.notes : (u.fixedNotes || window.Trainer.LEVELS[u.level2 || 0]),
         prompt: u.type === "keyfind" ? "Find the key" : "Name the note",
       });
     }
@@ -347,16 +395,20 @@
     }
     function finish(res) {
       saveStars(song.id, res.stars);
-      if (opts.onDone) opts.onDone(res);
+      const passed = !opts.passMark || res.accuracy >= opts.passMark;
+      if (opts.onDone) opts.onDone(res, passed);
       const cont = opts.returnTo
-        ? el("button", { class: "chip play", onclick: () => { overlay.remove(); opts.returnTo(); } }, "Continue ›")
+        ? el("button", { class: "chip play", onclick: () => { overlay.remove(); opts.returnTo(); } }, passed ? "Continue ›" : "Back")
         : el("button", { class: "chip", onclick: () => { overlay.remove(); songList(); } }, "Songs");
-      const again = el("button", { class: opts.returnTo ? "chip" : "chip play", onclick: () => { overlay.remove(); begin(); } }, "Again");
+      const again = el("button", { class: opts.returnTo ? "chip" : "chip play", onclick: () => { overlay.remove(); begin(); } }, opts.returnTo && !passed ? "Try again" : "Again");
+      const passNote = opts.passMark
+        ? el("div", { class: "result-sub" }, passed ? "Passed! (80%+)" : "Reach 80% to pass — try again.")
+        : el("div", { class: "result-sub" }, res.good + " clean · " + res.ok + " with slips" + (res.missed ? " · " + res.missed + " missed" : ""));
       const overlay = el("div", { class: "overlay", onclick: (e) => { if (e.target === overlay) overlay.remove(); } }, [
         el("div", { class: "card" }, [
           el("div", { class: "big-stars" }, starRow(res.stars)),
           el("div", { class: "result" }, Math.round(res.accuracy * 100) + "% accuracy"),
-          el("div", { class: "result-sub" }, res.good + " clean · " + res.ok + " with slips" + (res.missed ? " · " + res.missed + " missed" : "")),
+          passNote,
           el("div", { class: "card-actions" }, opts.returnTo ? [again, cont] : [cont, again]),
         ]),
       ]);
@@ -378,12 +430,13 @@
     const kbEl = el("div", {});
     const kbWrap = el("div", { class: "kb-wrap" }, kbEl);
 
-    const kb = new window.Keyboard(kbEl, { startMidi: 60, octaves: 2, showLabels: true });
+    const kb = new window.Keyboard(kbEl, { startMidi: opts.kbStart || 60, octaves: opts.kbOctaves || 2, showLabels: true });
     window._kb = kb;
 
     const trainer = new window.Trainer({
       svgEl: svg, keyboard: kb,
       displayMode: opts.displayMode || "staff",
+      clef: opts.clef || "treble",
       fixedNotes: opts.fixedNotes || null,
       goal: opts.goal || null,
       showKey: opts.showKey !== false,
@@ -407,18 +460,23 @@
     view.append(el("div", { class: "lesson" }, [controls, stats, staff, kbWrap]));
 
     function finish(res) {
-      if (opts.onDone) opts.onDone(res);
+      const passed = !opts.passMark || res.accuracy >= opts.passMark;
+      if (opts.onDone) opts.onDone(res, passed);
+      const pct = Math.round((res.accuracy || 0) * 100);
+      const actions = [];
+      actions.push(el("button", { class: "chip", onclick: () => { overlay.remove(); restart(); } }, "Try again"));
+      if (opts.returnTo) actions.push(el("button", { class: "chip play", onclick: () => { overlay.remove(); opts.returnTo(); } }, passed ? "Continue ›" : "Back"));
       const overlay = el("div", { class: "overlay" }, [
         el("div", { class: "card" }, [
           el("div", { class: "big-stars" }, starRow(res.stars)),
-          el("div", { class: "result" }, res.correct + "/" + res.total + " correct"),
-          el("div", { class: "card-actions" }, [
-            el("button", { class: "chip play", onclick: () => { overlay.remove(); (opts.returnTo || home)(); } }, "Continue ›"),
-          ]),
+          el("div", { class: "result" }, res.correct + "/" + res.total + " correct · " + pct + "%"),
+          opts.passMark ? el("div", { class: "result-sub" }, passed ? "Passed! (80%+)" : "Reach 80% to pass — give it another go.") : null,
+          el("div", { class: "card-actions" }, actions),
         ]),
       ]);
       view.append(overlay);
     }
+    function restart() { trainerView(opts); }
 
     trainer.start();
   }

@@ -253,6 +253,26 @@ header.about-bar .nav { display: flex; align-items: center; gap: 10px; }
 .key.hl-bad { background: linear-gradient(#ffd0d0, #ff9b9b) !important; }
 .key.black.hl-bad { background: linear-gradient(#7a3f3f, #5e2c2c) !important; }
 
+/* ---- Course (tiers + next-up + completed) ---- */
+.course-wrap { max-width: 680px; margin: 0 auto; padding: 12px; }
+.next-up { margin: 6px 0 10px; }
+.next-label { font-size: 12px; letter-spacing: 0.08em; color: var(--accent); font-weight: 700; margin: 0 4px 8px; }
+.next-card { display: flex; align-items: center; gap: 16px; width: 100%; text-align: left; cursor: pointer;
+  padding: 20px; border-radius: 16px; color: var(--ink);
+  background: linear-gradient(135deg, #243049, #1a2336); border: 1px solid #34507e; }
+.next-card:active { filter: brightness(1.1); }
+.next-icon { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; flex: 0 0 auto; background: #2a3654; color: var(--accent); font-size: 20px; }
+.next-meta { display: flex; flex-direction: column; flex: 1 1 auto; min-width: 0; }
+.next-title { font-size: 19px; font-weight: 700; }
+.next-blurb { font-size: 13px; color: var(--muted); }
+.next-go { font-size: 22px; color: var(--accent); }
+.next-done { text-align: center; color: #9fd07f; padding: 18px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; }
+.coming-soon { color: var(--muted); font-size: 14px; padding: 8px 6px 14px; font-style: italic; }
+.completed { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 6px; }
+.completed > summary { cursor: pointer; color: var(--muted); font-size: 14px; padding: 10px 4px; list-style: none; }
+.completed > summary::-webkit-details-marker { display: none; }
+.completed .song-list { padding-top: 4px; }
+
 /* ---- Course path ---- */
 .song-row.locked { opacity: 0.5; cursor: default; }
 .song-dot.unit { background: #2a3654; color: var(--accent); }

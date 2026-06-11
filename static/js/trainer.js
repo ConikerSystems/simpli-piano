@@ -23,7 +23,10 @@
     const oct = Math.floor(m / 12) - 1;
     return oct * 7 + PC_ORDINAL[((m % 12) + 12) % 12];
   }
-  const noteY = (m) => E4_Y - (diatonicIndex(m) - E4_DI) * HALF;
+  // Bottom staff line: treble = E4, bass = G2. y is measured from that line.
+  const BASS_REF_DI = 2 * 7 + 4; // G2
+  const refDI = (clef) => (clef === "bass" ? BASS_REF_DI : E4_DI);
+  const noteY = (m, clef) => E4_Y - (diatonicIndex(m) - refDI(clef)) * HALF;
 
   function whiteInRange(lo, hi) {
     const out = [];
@@ -47,21 +50,22 @@
     return l;
   }
 
-  function drawStaff(svg, midi, mode) {
+  function drawStaff(svg, midi, mode, clefKind) {
+    clefKind = clefKind || "treble";
     svg.innerHTML = "";
     svg.setAttribute("viewBox", "0 0 300 180");
     const left = 14, right = 286;
-    // 5 staff lines (E4..F5)
+    // 5 staff lines
     for (let i = 0; i < 5; i++) {
       const y = E4_Y - i * GAP;
       svg.appendChild(line(left, y, right, y));
     }
-    // treble clef glyph
+    // clef glyph (treble 𝄞 or bass 𝄢)
     const clef = document.createElementNS(SVGNS, "text");
-    clef.setAttribute("x", 18); clef.setAttribute("y", 124);
-    clef.setAttribute("font-size", "78"); clef.setAttribute("fill", "#e8eaf0");
+    clef.setAttribute("x", 18); clef.setAttribute("y", clefKind === "bass" ? 100 : 124);
+    clef.setAttribute("font-size", clefKind === "bass" ? "58" : "78"); clef.setAttribute("fill", "#e8eaf0");
     clef.setAttribute("font-family", "Bravura, 'Noto Music', serif");
-    clef.textContent = "𝄞"; // 𝄞
+    clef.textContent = clefKind === "bass" ? "𝄢" : "𝄞";
     svg.appendChild(clef);
 
     if (mode === "name") {
@@ -74,7 +78,7 @@
       return;
     }
 
-    const cx = 180, y = noteY(midi);
+    const cx = 180, y = noteY(midi, clefKind);
     // ledger lines below / above the staff
     if (y > E4_Y) for (let ly = E4_Y + GAP; ly <= y; ly += GAP) svg.appendChild(line(cx - 16, ly, cx + 16, ly));
     if (y < E4_Y - 4 * GAP) for (let ly = E4_Y - 5 * GAP; ly >= y; ly -= GAP) svg.appendChild(line(cx - 16, ly, cx + 16, ly));
@@ -92,11 +96,12 @@
 
   class Trainer {
     constructor({ svgEl, keyboard, onUpdate, displayMode = "staff", fixedNotes = null, goal = null, onDone = null,
-                  showKey = true, octaveAgnostic = true }) {
+                  showKey = true, octaveAgnostic = true, clef = "treble" }) {
       this.svg = svgEl;
       this.keyboard = keyboard;
       this.onUpdate = onUpdate || (() => {});
       this.mode = displayMode;          // "staff" | "name"
+      this.clef = clef;                 // "treble" | "bass"
       this.fixedNotes = fixedNotes;     // if set, drill only these (course key-find)
       this.goal = goal;                 // correct answers to finish (course), else endless
       this.onDone = onDone;
@@ -127,7 +132,7 @@
       let m;
       do { m = pool[Math.floor(Math.random() * pool.length)]; } while (m === this.target && pool.length > 1);
       this.target = m;
-      drawStaff(this.svg, m, this.mode);
+      drawStaff(this.svg, m, this.mode, this.clef);
       this._showTarget();
       this._emit();
     }

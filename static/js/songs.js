@@ -125,6 +125,15 @@
       src: "C C C D E E D E F Gh C5 C5 C5 G G G E E E C C C G F E D Cw" }),
     makeSong({ id: "jingle-bells", title: "Jingle Bells", difficulty: 3, tempo: 110,
       src: "E E Eh E E Eh E G C D Ew F F F F F E E E E D D E Dh Gh" }),
+    // ---- Intermediate exercises (left hand / scales / chords / both hands) ----
+    makeSong({ id: "lh-warmup", title: "Left-Hand Warm-Up", difficulty: 2, tempo: 90, hand: "left",
+      src: "C3 D E F G F E D Cw" }),
+    makeSong({ id: "c-scale", title: "C Major Scale", difficulty: 2, tempo: 100,
+      src: "C4 D4 E4 F4 G4 A4 B4 C5 B4 A4 G4 F4 E4 D4 C4w" }),
+    makeSong({ id: "hands-together", title: "Hands Together", difficulty: 3, tempo: 80, hand: "both",
+      src: "C3+C4 C3+D4 C3+E4 C3+F4 C3+G4h G3+G4 G3+F4 G3+E4 G3+D4 G3+C4h" }),
+    makeSong({ id: "triads-cfg", title: "First Chords: C F G", difficulty: 3, tempo: 80, hand: "both",
+      src: "C4+E4+G4h F4+A4+C5h G4+B4+D5h C4+E4+G4h" }),
   ];
 
   // ---- User songs (localStorage) ----------------------------------------
