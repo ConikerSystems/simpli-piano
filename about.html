@@ -155,15 +155,17 @@
     var ABOUT_URL = location.origin + location.pathname;
     var DIR = location.pathname.substring(0, location.pathname.lastIndexOf("/") + 1);
     var PDF_URL = location.origin + DIR + "simpli-piano-about.pdf";
+    // Message only — the link is passed separately in the share sheet's `url`
+    // field so it isn't duplicated. (iOS appends `url` after `text`.)
     var SHARE_TEXT = "Simpli Piano — a simple, ad-free way to learn piano on your iPad. "
-      + "Here's all about it and how to get it, free:\n" + ABOUT_URL;
+      + "Here's all about it and how to get it, free:";
 
     document.getElementById("share-btn").onclick = async function () {
       if (navigator.share) {
         try { await navigator.share({ title: "About Simpli Piano", text: SHARE_TEXT, url: ABOUT_URL }); return; } catch (e) { return; }
       }
-      // No native share sheet (e.g. desktop): copy the link to paste anywhere.
-      try { await navigator.clipboard.writeText(SHARE_TEXT); alert("Link copied — paste it into a text or email."); }
+      // No native share sheet (e.g. desktop): copy the message + link to paste anywhere.
+      try { await navigator.clipboard.writeText(SHARE_TEXT + "\n" + ABOUT_URL); alert("Link copied — paste it into a text or email."); }
       catch (e) { window.prompt("Copy this link:", ABOUT_URL); }
     };
 
