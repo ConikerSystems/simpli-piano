@@ -20,7 +20,7 @@
     <div class="nav">
       <a class="chip" href="index.html">← Back</a>
       <button class="chip" id="share-btn">📤 Share</button>
-      <a class="chip" href="simpli-piano-about.pdf" target="_blank" rel="noopener">Download PDF</a>
+      <button class="chip" id="pdf-btn">Download PDF</button>
     </div>
   </header>
 
@@ -178,6 +178,30 @@
     document.getElementById("copy-url").onclick = async function () {
       try { await navigator.clipboard.writeText(APP_URL); this.textContent = "Copied!"; }
       catch (e) { window.prompt("Copy this link:", APP_URL); }
+    };
+
+    // Download PDF — NEVER navigate the window (in a Home-Screen app that traps
+    // the user with no way back). Use the iOS share sheet (an overlay) so they
+    // can Save to Files / share and return straight to the app.
+    var standalone = (window.matchMedia && matchMedia("(display-mode: standalone)").matches) || window.navigator.standalone === true;
+    document.getElementById("pdf-btn").onclick = async function () {
+      // Best path: share the actual PDF file via the share sheet.
+      try {
+        const res = await fetch("simpli-piano-about.pdf", { cache: "force-cache" });
+        const blob = await res.blob();
+        const file = new File([blob], "Simpli-Piano.pdf", { type: "application/pdf" });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file], title: "Simpli Piano" });
+          return;
+        }
+      } catch (e) { /* fall through */ }
+      // Share the PDF link via the sheet (still an overlay — no navigation).
+      if (navigator.share) { try { await navigator.share({ title: "Simpli Piano PDF", url: PDF_URL }); return; } catch (e) { return; } }
+      // Regular browser tab (not installed): a new tab is safe.
+      if (!standalone) { window.open("simpli-piano-about.pdf", "_blank"); return; }
+      // Last resort in an installed app: copy the link instead of trapping them.
+      try { await navigator.clipboard.writeText(PDF_URL); alert("PDF link copied — open it in Safari."); }
+      catch (e) { window.prompt("Open this PDF link in Safari:", PDF_URL); }
     };
   </script>
 </body>
