@@ -131,7 +131,11 @@ header.about-bar .nav { display: flex; align-items: center; gap: 10px; }
 .site-footer a:hover { color: var(--ink); }
 .footer-sep { margin: 0 8px; }
 @media print {
+  /* The app shell pins html/body to 100% height with overflow hidden, which
+     clips a printed page to one screen. Let the About page flow across pages. */
+  html, body.about-page { height: auto !important; min-height: 0 !important; overflow: visible !important; }
   body.about-page { background: #fff !important; color: #111 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .about-section, .why-item, .audience-item { page-break-inside: avoid; }
   header.about-bar, .about-cta { display: none !important; }
   .about-card { border: none !important; padding: 0 !important; background: #fff !important; }
   .about-hero h1, .about-tagline, .about-section h2, .about-section p, .about-section b,
