@@ -141,11 +141,9 @@
       <div class="about-brand">
         <div class="brand-divider"></div>
         <div class="brand-line">
-          Developed by <a href="https://conikersystems.com" target="_blank" rel="noopener" class="brand-link">Coniker Systems™</a>
+          © <span id="cr-years">2026</span> <a href="https://conikersystems.com" target="_blank" rel="noopener" class="brand-link">Coniker Systems™</a>
           <span class="brand-sep">·</span>
           <a href="https://conikersystems.com" target="_blank" rel="noopener" class="brand-link">conikersystems.com</a>
-          <span class="brand-sep">·</span>
-          © <span id="cr-years">2026</span> Coniker Systems™
           <span class="brand-sep">·</span>
           v<span id="app-ver"></span>
         </div>
@@ -155,8 +153,7 @@
   </main>
   <script>
     document.getElementById("app-ver").textContent = window.APP_VERSION || "1.0";
-    var _y = new Date().getFullYear();
-    document.getElementById("cr-years").textContent = _y > 2026 ? "2026–" + _y : "2026";
+    document.getElementById("cr-years").textContent = new Date().getFullYear();
 
     var APP_URL = "https://jconiker.github.io/simpli-piano/";
     // This About page's own URL — sharing it lets someone read about Simpli Piano

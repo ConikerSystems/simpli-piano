@@ -66,12 +66,9 @@
   // sets window._micTarget(midi) to receive detected notes; views that don't set
   // it simply leave the mic idle-but-on.
   function initChrome() {
-    // Copyright year auto-extends from first-publication (2026) — never needs editing.
-    const nowY = new Date().getFullYear();
-    const crYears = nowY > 2026 ? "2026–" + nowY : "2026";
+    // Current year, auto-updated — never needs manual editing.
     document.getElementById("app-footer").innerHTML =
-      'Developed by <a href="https://conikersystems.com" target="_blank" rel="noopener">Coniker Systems™</a>'
-      + '<span class="footer-sep">·</span>© ' + crYears + ' Coniker Systems™'
+      '© ' + new Date().getFullYear() + ' <a href="https://conikersystems.com" target="_blank" rel="noopener">Coniker Systems™</a>'
       + '<span class="footer-sep">·</span>v' + (window.APP_VERSION || "1.0");
 
     const micBtn = document.getElementById("mic-btn");
@@ -582,7 +579,27 @@
     if (window._relayout) window._relayout();
     else if (window._kb && !window._kb.fixedRange) window._kb.render();
   }, 150); });
-  if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+  // Service worker + auto-update on reopen/refocus. iOS resumes the installed app
+  // from memory and never checks for a new version on its own, so we explicitly
+  // check whenever the app becomes visible; when a new version activates it takes
+  // control and we reload once to the fresh build.
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      const hadController = !!navigator.serviceWorker.controller;
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        if (!hadController || refreshing) return; // ignore the first-ever install
+        refreshing = true;
+        location.reload();
+      });
+      navigator.serviceWorker.register("sw.js").then((reg) => {
+        const check = () => { if (navigator.onLine) reg.update().catch(() => {}); };
+        document.addEventListener("visibilitychange", () => { if (!document.hidden) check(); });
+        window.addEventListener("focus", check);
+        check();
+      }).catch(() => {});
+    });
+  }
 
   initChrome();
   start();
