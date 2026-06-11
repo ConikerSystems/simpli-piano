@@ -169,10 +169,10 @@
   }
 
   // ---- Home -------------------------------------------------------------
-  function courseProgressText() {
-    const total = window.Course.CURRICULUM.length;
-    const done = window.Course.CURRICULUM.filter((u) => window.Course.starsFor(u.id) > 0).length;
-    return done ? done + " of " + total + " lessons done — keep going!" : "Step-by-step lessons for beginners";
+  function trackProgressText(track, intro) {
+    const total = track.CURRICULUM.length;
+    const done = track.CURRICULUM.filter((u) => track.isComplete(u.id)).length;
+    return done ? done + " of " + total + " done — keep going!" : intro;
   }
   function home() {
     clearView();
@@ -193,8 +193,9 @@
       el("p", { class: "tagline" }, "Learn piano the simple way — follow the falling notes."),
       el("p", { class: "home-hint" }, "New to piano? Start with Course → “Meet the Keys.”"),
       el("div", { class: "tiles" }, [
-        tile("🎓  Course", courseProgressText(), () => courseView(), "primary"),
-        tile("🎵  Songs", window.Songs.all().length + " songs to play", () => songList()),
+        tile("🎓  Course", trackProgressText(window.Course, "Reading lessons, beginner → up"), () => pathView(window.Course, "Course"), "primary"),
+        tile("🎸  Chords", trackProgressText(window.Chords, "Play chords to accompany songs"), () => pathView(window.Chords, "Chords")),
+        tile("🎵  Songs", window.Songs.all().filter((s) => !s.exercise).length + " songs to play", () => songList()),
         tile("📖  Read Notes", "Note-reading practice", () => trainerView()),
         tile("🎹  Free Play", "Just play around", () => freePlay()),
         tile("✏️  Add a Song", "Type in your own", () => editor()),
@@ -207,18 +208,20 @@
     ]));
   }
 
-  // ---- Course (next-up prominent · tiers · completed collapsed) ---------
-  function courseView() {
+  // ---- Learning path (next-up prominent · tiers · completed collapsed) --
+  // Generic over a track (window.Course reading path, or window.Chords).
+  function pathView(track, title) {
     clearView();
-    setChrome("Course", { back: true });
+    setChrome(title, { back: true });
     backBtn.onclick = home;
-    const C = window.Course;
+    const C = track;
+    const back = () => pathView(track, title);
     const wrap = el("div", { class: "course-wrap" });
 
     const unitIcon = (u) => (u.type === "song" ? "♪" : u.type === "trainer" ? "📖" : "🎹");
     const unitRow = (u, i, done) => el("button", {
       class: "song-row" + (!done && !C.unlocked(i) ? " locked" : ""),
-      onclick: (!done && !C.unlocked(i)) ? null : () => launchUnit(i),
+      onclick: (!done && !C.unlocked(i)) ? null : () => launchUnit(track, i, back),
     }, [
       el("span", { class: "song-dot unit" + (done ? " done" : "") }, !done && !C.unlocked(i) ? "🔒" : done ? "✓" : unitIcon(u)),
       el("span", { class: "song-meta" }, [
@@ -234,7 +237,7 @@
       const u = C.CURRICULUM[ni];
       wrap.append(el("div", { class: "next-up" }, [
         el("div", { class: "next-label" }, "NEXT UP"),
-        el("button", { class: "next-card", onclick: () => launchUnit(ni) }, [
+        el("button", { class: "next-card", onclick: () => launchUnit(track, ni, back) }, [
           el("span", { class: "next-icon" }, unitIcon(u)),
           el("span", { class: "next-meta" }, [
             el("span", { class: "next-title" }, u.title),
@@ -276,14 +279,14 @@
     view.append(wrap);
   }
 
-  function launchUnit(i) {
-    const u = window.Course.CURRICULUM[i];
-    const onDone = (res) => window.Course.complete(u.id, res.stars || 0, res.accuracy);
+  function launchUnit(track, i, back) {
+    const u = track.CURRICULUM[i];
+    const onDone = (res) => track.complete(u.id, res.stars || 0, res.accuracy);
     if (u.type === "song") {
-      lesson(u.song, { mode: u.mode, onDone, returnTo: courseView, courseTitle: u.title, passMark: window.Course.PASS });
+      lesson(u.song, { mode: u.mode, onDone, returnTo: back, courseTitle: u.title, passMark: track.PASS });
     } else {
       trainerView({
-        title: u.title, returnTo: courseView, onDone, goal: u.goal, passMark: window.Course.PASS,
+        title: u.title, returnTo: back, onDone, goal: u.goal, passMark: track.PASS,
         displayMode: u.type === "keyfind" ? "name" : "staff",
         clef: u.clef || "treble",
         kbStart: u.kbStart, kbOctaves: u.kbOctaves,
@@ -314,9 +317,9 @@
 
     const all = window.Songs.all();
     const groups = [
-      { name: "Beginner", test: (s) => !s.user && s.difficulty <= 1 },
-      { name: "Easy", test: (s) => !s.user && s.difficulty === 2 },
-      { name: "A bit more", test: (s) => !s.user && s.difficulty >= 3 },
+      { name: "Beginner", test: (s) => !s.user && !s.exercise && s.difficulty <= 1 },
+      { name: "Easy", test: (s) => !s.user && !s.exercise && s.difficulty === 2 },
+      { name: "A bit more", test: (s) => !s.user && !s.exercise && s.difficulty >= 3 },
       { name: "Your songs", test: (s) => s.user },
     ];
     groups.forEach((g) => {
