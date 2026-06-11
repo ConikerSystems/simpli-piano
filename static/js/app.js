@@ -66,9 +66,12 @@
   // sets window._micTarget(midi) to receive detected notes; views that don't set
   // it simply leave the mic idle-but-on.
   function initChrome() {
+    // Copyright year auto-extends from first-publication (2026) — never needs editing.
+    const nowY = new Date().getFullYear();
+    const crYears = nowY > 2026 ? "2026–" + nowY : "2026";
     document.getElementById("app-footer").innerHTML =
       'Developed by <a href="https://conikersystems.com" target="_blank" rel="noopener">Coniker Systems™</a>'
-      + '<span class="footer-sep">·</span>© 2026 Coniker Systems™'
+      + '<span class="footer-sep">·</span>© ' + crYears + ' Coniker Systems™'
       + '<span class="footer-sep">·</span>v' + (window.APP_VERSION || "1.0");
 
     const micBtn = document.getElementById("mic-btn");
