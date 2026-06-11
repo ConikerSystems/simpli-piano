@@ -35,7 +35,7 @@ python3 -m http.server 5010     # then open http://127.0.0.1:5010
 ## Hosting
 
 Intended to be published with **GitHub Pages** from the repo root, e.g.
-`https://jconiker.github.io/simpli-piano/`. All asset paths are relative so it
+`https://conikersystems.github.io/simpli-piano/`. All asset paths are relative so it
 works under the project sub-path.
 
 ## Files
