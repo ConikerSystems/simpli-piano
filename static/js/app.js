@@ -576,6 +576,17 @@
             + "Sharps/flats: <code>F#</code> <code>Bb</code>. Rest: <code>Rq</code>. Chord: <code>C+E+G</code>." }),
     ]);
 
+    const intro = el("p", { class: "editor-intro", html:
+      "Type the <b>notes</b> of a melody below — the letter keys (like <code>E D C</code>), "
+      + "not just the song's title. It becomes a song you can play and practice here, with the "
+      + "keys lighting up. (Tip: tap <b>Try an example</b> to see how it works.)" });
+
+    const example = el("button", { class: "chip", onclick: () => {
+      title.value = "Twinkle (example)"; tempo.value = 100;
+      notes.value = "C C G G A A Gh F F E E D D Ch";
+      showMsg("Loaded an example — tap Preview to hear it, then Save song.", false);
+    } }, "✨ Try an example");
+
     const preview = el("button", { class: "chip", onclick: () => {
       const { notes: ns, errors } = window.Songs.parseSong(notes.value);
       if (errors.length) return showMsg("Can't read: " + errors.join(", "), true);
@@ -590,9 +601,10 @@
     } }, existing ? "Save changes" : "Save song");
 
     view.append(el("div", { class: "editor" }, [
+      intro,
       el("div", { class: "field-row" }, [title, tempo]),
       notes, help, msg,
-      el("div", { class: "editor-actions" }, [preview, save]),
+      el("div", { class: "editor-actions" }, [example, preview, save]),
       userSongsPanel(),
     ]));
   }

@@ -303,6 +303,8 @@ a.chip { text-decoration: none; display: inline-flex; align-items: center; }
 
 /* ---- Editor ---- */
 .editor { max-width: 640px; margin: 0 auto; padding: 16px; }
+.editor-intro { color: #c7ccd8; font-size: 14.5px; line-height: 1.6; margin: 0 0 16px; }
+.editor-intro code { background: var(--panel-2); padding: 1px 5px; border-radius: 4px; color: #cdddff; }
 .field-row { display: flex; gap: 10px; margin-bottom: 10px; }
 .field {
   background: var(--panel); border: 1px solid var(--line); color: var(--ink);
