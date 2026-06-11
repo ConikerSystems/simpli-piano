@@ -167,28 +167,27 @@
       catch (e) { window.location.href = "sms:?&body=" + encodeURIComponent(SHARE_TEXT); }
     };
 
-    // Download PDF — NEVER navigate the window (in a Home-Screen app that traps
-    // the user with no way back). Use the iOS share sheet (an overlay) so they
-    // can Save to Files / share and return straight to the app.
-    var standalone = (window.matchMedia && matchMedia("(display-mode: standalone)").matches) || window.navigator.standalone === true;
+    // Download PDF — save the file to the device (sharing is handled by the
+    // Share button). Fetch the file and trigger a download via a blob URL, which
+    // saves to Files/Downloads without navigating the window.
     document.getElementById("pdf-btn").onclick = async function () {
-      // Best path: share the actual PDF file via the share sheet.
+      const btn = this;
+      btn.textContent = "Preparing…";
       try {
-        const res = await fetch("simpli-piano-about.pdf", { cache: "force-cache" });
+        const res = await fetch("simpli-piano-about.pdf", { cache: "reload" });
         const blob = await res.blob();
-        const file = new File([blob], "Simpli-Piano.pdf", { type: "application/pdf" });
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          await navigator.share({ files: [file], title: "Simpli Piano" });
-          return;
-        }
-      } catch (e) { /* fall through */ }
-      // Share the PDF link via the sheet (still an overlay — no navigation).
-      if (navigator.share) { try { await navigator.share({ title: "Simpli Piano PDF", url: PDF_URL }); return; } catch (e) { return; } }
-      // Regular browser tab (not installed): a new tab is safe.
-      if (!standalone) { window.open("simpli-piano-about.pdf", "_blank"); return; }
-      // Last resort in an installed app: copy the link instead of trapping them.
-      try { await navigator.clipboard.writeText(PDF_URL); alert("PDF link copied — open it in Safari."); }
-      catch (e) { window.prompt("Open this PDF link in Safari:", PDF_URL); }
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "Simpli-Piano.pdf";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+      } catch (e) {
+        alert("Couldn't prepare the PDF — check your connection and try again.");
+      }
+      btn.textContent = "Download PDF";
     };
   </script>
 </body>
