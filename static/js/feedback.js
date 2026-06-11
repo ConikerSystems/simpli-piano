@@ -2,7 +2,7 @@
  *
  * Configure (optional) before this script loads:
  *   window.APP_INFO = { name, url, email, noFab }
- * Defaults: name = document.title, url = current URL, email = joeconiker@gmail.com.
+ * Defaults: name = document.title, url = current URL, email = info@conikersystems.com.
  * If noFab is falsy, a floating 💬 button is injected (bottom-right). Apps that
  * want their own trigger can set noFab:true and call window.Feedback.open().
  *
@@ -13,7 +13,7 @@
   "use strict";
 
   const cfg = Object.assign(
-    { name: document.title || "this app", url: location.href, email: "joeconiker@gmail.com", noFab: false },
+    { name: document.title || "this app", url: location.href, email: "info@conikersystems.com", noFab: false },
     window.APP_INFO || {}
   );
   const KEY = "appfeedback.notes";
