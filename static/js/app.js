@@ -40,11 +40,14 @@
     actions.forEach((a) => actionsEl.append(a));
   }
   function clearView() {
-    if (window._mic) { window._mic.stop(); window._mic = null; }
+    // NOTE: the mic is intentionally NOT stopped here — it stays on across pages
+    // so you can keep playing your real piano while moving between lessons. Only
+    // the per-view routing target is cleared; each view sets its own.
     if (window._active && window._active.stop) { try { window._active.stop(); } catch {} window._active = null; }
     view.innerHTML = "";
     window._kb = null;
     window._relayout = null;
+    window._micTarget = null;
   }
 
   // Coarse device detection so the keyboard sizes sensibly per device.
@@ -58,24 +61,50 @@
     return { ios: ipad || iphone, tablet, phone: iphone && !ipad };
   }
 
-  // ---- Microphone toggle (shared by lessons + trainer) ------------------
-  function micToggle(feed, hooks = {}) {
-    const note = el("span", { class: "mic-note" });
-    const btn = el("button", { class: "chip mic" }, "🎤 Mic");
-    btn.onclick = async () => {
-      if (window._mic) { window._mic.stop(); window._mic = null; btn.classList.remove("active"); note.textContent = ""; hooks.onStop && hooks.onStop(); return; }
-      if (!window.Mic.supported) { note.textContent = "no mic"; return; }
+  // ---- Persistent chrome: footer (every page) + global mic --------------
+  // The mic is global so it keeps listening as you move between pages. Each view
+  // sets window._micTarget(midi) to receive detected notes; views that don't set
+  // it simply leave the mic idle-but-on.
+  function initChrome() {
+    document.getElementById("app-footer").innerHTML =
+      'Developed by <a href="https://conikersystems.com" target="_blank" rel="noopener">Coniker Systems™</a>'
+      + '<span class="footer-sep">·</span>© 2026 Coniker Systems™'
+      + '<span class="footer-sep">·</span>v' + (window.APP_VERSION || "1.0");
+
+    const micBtn = document.getElementById("mic-btn");
+    const micNote = document.getElementById("mic-note");
+    let noteTimer = null;
+
+    const setOff = (label) => {
+      window._mic = null;
+      micBtn.classList.remove("active");
+      micBtn.setAttribute("aria-pressed", "false");
+      micBtn.textContent = label || "🎤 Mic";
+      micNote.textContent = "";
+      if (window._active && window._active.setOctaveTolerant) window._active.setOctaveTolerant(false);
+    };
+
+    micBtn.onclick = async () => {
+      if (window._mic) { window._mic.stop(); setOff(); return; }
+      if (!window.Mic || !window.Mic.supported) { micBtn.textContent = "🎤 n/a"; return; }
+      micBtn.textContent = "🎤 …";
       try {
         const mic = new window.Mic.Mic({
-          onNote: (m) => feed(m),
-          onLevel: (m) => { note.textContent = "♪ " + window.Theory.midiToName(m); },
+          onNote: (m) => { if (typeof window._micTarget === "function") window._micTarget(m); },
+          onLevel: (m) => {
+            micNote.textContent = window.Theory.midiToName(m);
+            clearTimeout(noteTimer);
+            noteTimer = setTimeout(() => { micNote.textContent = ""; }, 500);
+          },
         });
         await mic.start();
-        window._mic = mic; btn.classList.add("active"); note.textContent = "listening…";
-        hooks.onStart && hooks.onStart();
-      } catch { note.textContent = "mic blocked"; }
+        window._mic = mic;
+        micBtn.classList.add("active");
+        micBtn.setAttribute("aria-pressed", "true");
+        micBtn.textContent = "🎤 On";
+        if (window._active && window._active.setOctaveTolerant) window._active.setOctaveTolerant(true);
+      } catch { setOff("🎤 ✕"); }
     };
-    return el("span", { class: "mic-wrap" }, [btn, note]);
   }
 
   // ---- Home -------------------------------------------------------------
@@ -103,10 +132,6 @@
         el("button", { class: "foot-btn", onclick: () => window.Feedback.shareApp() }, "📤  Share"),
         el("button", { class: "foot-btn", onclick: () => window.Feedback.open() }, "💬  Feedback"),
       ]),
-      el("div", { class: "site-footer", html:
-        'Developed by <a href="https://conikersystems.com" target="_blank" rel="noopener">Coniker Systems™</a>'
-        + '<span class="footer-sep">·</span>© 2026 Coniker Systems™'
-        + '<span class="footer-sep">·</span>v' + (window.APP_VERSION || "1.0") }),
     ]));
   }
 
@@ -199,10 +224,6 @@
     const controls = el("div", { class: "lesson-controls" }, [
       modeBtn, el("label", { class: "tempo" }, [el("span", {}, "Tempo"), tempo, tempoVal]),
       listenBtn, startBtn,
-      micToggle((m) => engine.input(m), {
-        onStart: () => engine.setOctaveTolerant(true),
-        onStop: () => engine.setOctaveTolerant(false),
-      }),
     ]);
     view.append(el("div", { class: "lesson" }, [controls, progress, status, lane, kbWrap]));
 
@@ -220,6 +241,9 @@
     });
     window._active = engine;
     kb.onPress = (m) => engine.input(m);
+    // Route the (persistent) mic to this lesson; grade by note name while it's on.
+    window._micTarget = (m) => engine.input(m);
+    engine.setOctaveTolerant(!!window._mic);
 
     function toggleMode() {
       mode = mode === "step" ? "moving" : "step";
@@ -285,13 +309,13 @@
     });
     window._active = trainer;
     kb.onPress = (m) => trainer.input(m);
+    window._micTarget = (m) => trainer.input(m); // global mic feeds the drill
 
     const showKeyBtn = el("button", { class: "chip" + (opts.showKey !== false ? " active" : ""),
       onclick: () => { const on = !showKeyBtn.classList.contains("active"); showKeyBtn.classList.toggle("active", on); trainer.setShowKey(on); } }, "Show key");
     const controls = el("div", { class: "lesson-controls" }, [
       showKeyBtn,
       el("button", { class: "chip", onclick: () => trainer.next() }, "Skip ›"),
-      micToggle((m) => trainer.input(m)),
     ]);
     view.append(el("div", { class: "lesson" }, [controls, stats, staff, kbWrap]));
 
@@ -352,6 +376,8 @@
 
     kb = new window.Keyboard(kbEl, { startMidi: 60 });
     window._kb = kb;
+    // With the mic on, light up the key for whatever note it hears (if in view).
+    window._micTarget = (m) => { if (kb.keyEls.get(m)) kb.flash(m, "good"); };
 
     // The C your thumb anchors on: Right = middle C (C4), Left = an octave lower (C3).
     const anchorC = (h) => (h === "left" ? 48 : 60);
@@ -458,5 +484,6 @@
   }, 150); });
   if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
 
+  initChrome();
   home();
 })();

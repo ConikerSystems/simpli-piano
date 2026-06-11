@@ -25,10 +25,15 @@
       <span class="logo" aria-hidden="true"></span>
       <h1 id="view-title">Simpli&nbsp;Piano</h1>
     </div>
+    <span id="mic-note" class="mic-note"></span>
+    <button id="mic-btn" class="chip mic" aria-pressed="false" title="Listen to your piano">🎤 Mic</button>
     <div id="topbar-actions" class="topbar-actions"></div>
   </header>
 
   <main id="view"></main>
+
+  <!-- Persistent footer on every page -->
+  <footer id="app-footer" class="site-footer app-footer"></footer>
 
   <!-- Modules load in dependency order; no build step. -->
   <script>

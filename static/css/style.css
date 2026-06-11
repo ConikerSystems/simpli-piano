@@ -55,6 +55,14 @@ body {
 /* ---- View container ---- */
 #view { flex: 1 1 auto; min-height: 0; overflow: auto; }
 
+/* ---- Persistent footer (every page) ---- */
+/* Higher specificity than the .site-footer base (which is defined later). */
+.site-footer.app-footer { flex: 0 0 auto; margin-top: 0; padding: 6px 12px; font-size: 11px; border-top: 1px solid var(--line); }
+
+/* Top-bar mic control */
+.topbar .chip.mic { flex: 0 0 auto; }
+.topbar .mic-note { flex: 0 0 auto; min-width: 0; margin-right: 2px; }
+
 /* ---- Home ---- */
 .home { max-width: 640px; margin: 0 auto; padding: 22px 18px; }
 .tagline { color: var(--muted); text-align: center; margin: 6px 0 22px; }
