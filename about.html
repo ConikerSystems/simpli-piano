@@ -162,9 +162,9 @@
       if (navigator.share) {
         try { await navigator.share({ title: "About Simpli Piano", text: SHARE_TEXT, url: ABOUT_URL }); return; } catch (e) { return; }
       }
-      // No share sheet (e.g. desktop): offer SMS, else copy the link.
+      // No native share sheet (e.g. desktop): copy the link to paste anywhere.
       try { await navigator.clipboard.writeText(SHARE_TEXT); alert("Link copied — paste it into a text or email."); }
-      catch (e) { window.location.href = "sms:?&body=" + encodeURIComponent(SHARE_TEXT); }
+      catch (e) { window.prompt("Copy this link:", ABOUT_URL); }
     };
 
     // Download PDF — save the file to the device (sharing is handled by the
