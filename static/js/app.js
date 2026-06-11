@@ -107,6 +107,23 @@
     };
   }
 
+  // Force-pull the latest version (iOS often resumes the installed app from
+  // memory instead of reloading, so it never sees a new release). Needs network.
+  function updateApp(btn) {
+    if (!navigator.onLine) { alert("Connect to Wi-Fi or cellular, then tap Update again."); return; }
+    if (btn) btn.textContent = "🔄  Updating…";
+    (async () => {
+      try {
+        if ("serviceWorker" in navigator) {
+          const regs = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(regs.map((r) => r.update().catch(() => {})));
+        }
+        if (window.caches) { const ks = await caches.keys(); await Promise.all(ks.map((k) => caches.delete(k))); }
+      } catch (e) { /* ignore */ }
+      location.href = "index.html?u=" + Date.now(); // cache-busted reload
+    })();
+  }
+
   // ---- Players (profiles) ----------------------------------------------
   function start() {
     if (!window.Profiles.activeId()) profilePicker();
@@ -198,12 +215,12 @@
         tile("🎵  Songs", window.Songs.all().filter((s) => !s.exercise).length + " songs to play", () => songList()),
         tile("📖  Read Notes", "Note-reading practice", () => trainerView()),
         tile("🎹  Free Play", "Just play around", () => freePlay()),
-        tile("✏️  Add a Song", "Type in your own", () => editor()),
       ]),
       el("div", { class: "home-footer" }, [
         el("button", { class: "foot-btn", onclick: () => { window.location.href = "about.html"; } }, "ℹ️  About"),
         el("button", { class: "foot-btn", onclick: () => window.Feedback.shareApp() }, "📤  Share"),
         el("button", { class: "foot-btn", onclick: () => window.Feedback.open() }, "💬  Feedback"),
+        el("button", { class: "foot-btn", onclick: (e) => updateApp(e.currentTarget) }, "🔄  Update"),
       ]),
     ]));
   }
@@ -320,7 +337,6 @@
       { name: "Beginner", test: (s) => !s.user && !s.exercise && s.difficulty <= 1 },
       { name: "Easy", test: (s) => !s.user && !s.exercise && s.difficulty === 2 },
       { name: "A bit more", test: (s) => !s.user && !s.exercise && s.difficulty >= 3 },
-      { name: "Your songs", test: (s) => s.user },
     ];
     groups.forEach((g) => {
       const songs = all.filter(g.test);
@@ -551,83 +567,6 @@
 
     layout();
     window._relayout = layout; // recompute key count on resize/orientation change
-  }
-
-  // ---- Song editor ------------------------------------------------------
-  function editor(editId) {
-    clearView();
-    setChrome("Add a Song", { back: true });
-    backBtn.onclick = songList;
-
-    const existing = editId ? window.Songs.byId(editId) : null;
-    const title = el("input", { type: "text", class: "field", placeholder: "Song title", value: existing?.title || "" });
-    const tempo = el("input", { type: "number", class: "field small", min: "40", max: "200", value: existing?.tempo || 90 });
-    const notes = el("textarea", { class: "field area", placeholder: "E D C D E E Eh   D D Dh   E G Gh",
-      html: existing ? window.Songs.serialize(existing.notes) : "" });
-    const msg = el("div", { class: "editor-msg" });
-    const showMsg = (t, bad) => { msg.textContent = t; msg.className = "editor-msg" + (bad ? " bad" : " ok"); };
-
-    const help = el("details", { class: "help" }, [
-      el("summary", {}, "How to type notes"),
-      el("div", { class: "html",
-        html: "Letters <b>A–G</b>, space-separated. Octave digit optional (sticky), e.g. <code>C4</code>. "
-            + "Durations: <code>w</code> whole · <code>h</code> half · <code>q</code> quarter (default) · "
-            + "<code>e</code> eighth · <code>s</code> sixteenth (add <code>.</code> to dot). "
-            + "Sharps/flats: <code>F#</code> <code>Bb</code>. Rest: <code>Rq</code>. Chord: <code>C+E+G</code>." }),
-    ]);
-
-    const intro = el("p", { class: "editor-intro", html:
-      "Type the <b>notes</b> of a melody below — the letter keys (like <code>E D C</code>), "
-      + "not just the song's title. It becomes a song you can play and practice here, with the "
-      + "keys lighting up. (Tip: tap <b>Try an example</b> to see how it works.)" });
-
-    const example = el("button", { class: "chip", onclick: () => {
-      title.value = "Twinkle (example)"; tempo.value = 100;
-      notes.value = "C C G G A A Gh F F E E D D Ch";
-      showMsg("Loaded an example — tap Preview to hear it, then Save song.", false);
-    } }, "✨ Try an example");
-
-    const preview = el("button", { class: "chip", onclick: () => {
-      const { notes: ns, errors } = window.Songs.parseSong(notes.value);
-      if (errors.length) return showMsg("Can't read: " + errors.join(", "), true);
-      if (!ns.length) return showMsg("Nothing to play yet.", true);
-      tempPlay(ns, +tempo.value || 90);
-    } }, "🔊 Preview");
-
-    const save = el("button", { class: "chip play", onclick: () => {
-      const res = window.Songs.saveUserSong({ id: existing?.id, title: title.value.trim(), tempo: +tempo.value || 90, src: notes.value });
-      if (res.errors) return showMsg("Can't save: " + res.errors.join(", "), true);
-      songList();
-    } }, existing ? "Save changes" : "Save song");
-
-    view.append(el("div", { class: "editor" }, [
-      intro,
-      el("div", { class: "field-row" }, [title, tempo]),
-      notes, help, msg,
-      el("div", { class: "editor-actions" }, [example, preview, save]),
-      userSongsPanel(),
-    ]));
-  }
-
-  function userSongsPanel() {
-    const mine = window.Songs.loadUser();
-    if (!mine.length) return el("div", {});
-    const wrap = el("div", { class: "mine" }, el("h3", {}, "Your songs"));
-    mine.forEach((s) => wrap.append(el("div", { class: "mine-row" }, [
-      el("span", {}, s.title),
-      el("button", { class: "link", onclick: () => editor(s.id) }, "Edit"),
-      el("button", { class: "link danger", onclick: () => { window.Songs.deleteUserSong(s.id); editor(); } }, "Delete"),
-    ])));
-    return wrap;
-  }
-
-  function tempPlay(ns, tempo) {
-    let t = 0; const mpb = 60000 / tempo;
-    ns.forEach((s) => {
-      if (!s.rest) (Array.isArray(s.midi) ? s.midi : [s.midi]).forEach((m) =>
-        setTimeout(() => window.PianoAudio.pluck(m, Math.max(180, s.beats * mpb * 0.9)), t));
-      t += s.beats * mpb;
-    });
   }
 
   // Unlock audio on first gesture (iOS requirement).
