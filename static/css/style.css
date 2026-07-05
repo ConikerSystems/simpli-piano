@@ -165,7 +165,27 @@ header.about-bar .nav { display: flex; align-items: center; gap: 10px; }
 .emoji-pick { width: 44px; height: 44px; font-size: 22px; border-radius: 10px; background: var(--panel-2); border: 1px solid var(--line); cursor: pointer; }
 .emoji-pick.active { border-color: var(--accent); background: #243049; }
 
+/* ---- Home stats strip (streak · daily goal · weekly minutes) ---- */
+.stats-strip {
+  display: flex; align-items: center; justify-content: center; gap: 16px; flex-wrap: wrap;
+  margin: 2px auto 0; padding: 8px 14px; max-width: 560px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 999px;
+  font-size: 13px; color: var(--muted);
+}
+.stats-strip .stat { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+.goal-bar { width: 64px; height: 6px; border-radius: 3px; background: var(--panel-2); overflow: hidden; display: inline-block; }
+.goal-fill { display: block; height: 100%; background: var(--accent); border-radius: 3px; }
+.result-callout { margin-top: 8px; font-size: 14px; color: var(--accent); }
+.result-callout:empty { display: none; }
+.workout-controls { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 14px 0 4px; flex-wrap: wrap; }
+.workout-preview .song-row { pointer-events: none; }
+.onboard-grid { margin-top: 18px; }
+.onboard-skip { margin-top: 22px; }
+
 /* ---- Song list ---- */
+.song-wrap { max-width: 680px; margin: 0 auto; }
+.genre-chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 12px 0; }
+.genre-chips .chip { padding: 7px 13px; font-size: 13px; }
 .song-list { max-width: 680px; margin: 0 auto; padding: 12px; display: grid; gap: 8px; }
 .group-head { font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin: 16px 4px 2px; }
 .group-head:first-child { margin-top: 4px; }
@@ -178,6 +198,7 @@ header.about-bar .nav { display: flex; align-items: center; gap: 10px; }
 .song-dot { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; flex: 0 0 auto; background: #2a3654; color: var(--accent); }
 .diff-2 { background: #2f3a2a; color: #9fd07f; }
 .diff-3 { background: #3a2f2a; color: #e0a87f; }
+.diff-4 { background: #3a2a38; color: #d99fd0; }
 .song-meta { display: flex; flex-direction: column; flex: 1 1 auto; min-width: 0; }
 .song-title { font-weight: 600; }
 .song-sub { font-size: 12px; color: var(--muted); }

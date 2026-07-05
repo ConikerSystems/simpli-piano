@@ -44,10 +44,33 @@
     // so you can keep playing your real piano while moving between lessons. Only
     // the per-view routing target is cleared; each view sets its own.
     if (window._active && window._active.stop) { try { window._active.stop(); } catch {} window._active = null; }
+    flushClock(); practicing = false;
     view.innerHTML = "";
     window._kb = null;
     window._relayout = null;
     window._micTarget = null;
+  }
+
+  // ---- Practice clock (feeds Stats; per local day, per player) ----------
+  // Paused while the app is hidden — iOS keeps the page suspended in the
+  // background and that time must not count as practice.
+  let practicing = false, clockStart = null;
+  function startClock() { practicing = true; clockStart = performance.now(); }
+  function flushClock() {
+    if (clockStart != null) window.Stats.log((performance.now() - clockStart) / 1000);
+    clockStart = null;
+  }
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) flushClock();
+    else if (practicing) clockStart = performance.now();
+  });
+  // Checkpoint the clock (e.g. at a finish overlay) so Stats.today() is fresh;
+  // returns today's seconds from BEFORE this stretch was logged (for callouts).
+  function checkpointClock() {
+    const prev = window.Stats.today();
+    flushClock();
+    if (practicing) clockStart = performance.now();
+    return prev;
   }
 
   // Coarse device detection so the keyboard sizes sensibly per device.
@@ -186,12 +209,32 @@
   }
 
   // ---- Home -------------------------------------------------------------
+  // Streak / today's-goal / weekly-minutes strip (hidden until first practice).
+  function statsStrip() {
+    const S = window.Stats;
+    const todayMin = Math.floor(S.today() / 60), weekMin = Math.round(S.week() / 60);
+    const s = S.streak();
+    if (!todayMin && !weekMin && !s) return null;
+    const goal = S.goalMin();
+    const pct = Math.min(100, Math.round((S.today() / (goal * 60)) * 100));
+    return el("div", { class: "stats-strip" }, [
+      el("span", { class: "stat" }, "🔥 " + s + (s === 1 ? " day" : " days")),
+      el("span", { class: "stat goal" }, [
+        el("span", { class: "goal-bar" }, el("span", { class: "goal-fill", style: "width:" + pct + "%" })),
+        el("span", {}, todayMin + " of " + goal + " min today"),
+      ]),
+      el("span", { class: "stat" }, weekMin + " min this week"),
+    ]);
+  }
+
   function trackProgressText(track, intro) {
     const total = track.CURRICULUM.length;
     const done = track.CURRICULUM.filter((u) => track.isComplete(u.id)).length;
     return done ? done + " of " + total + " done — keep going!" : intro;
   }
   function home() {
+    // First visit for this player → the quick "make it yours" quiz.
+    if (window.Profiles.active() && !window.Stats.getOnboard()) return onboardView();
     clearView();
     setChrome("Simpli&nbsp;Piano", { back: false });
     backBtn.onclick = null;
@@ -207,13 +250,15 @@
         el("span", {}, me.name),
         el("span", { class: "swap" }, "⇄"),
       ]) : null,
+      statsStrip(),
       el("p", { class: "tagline" }, "Learn piano the simple way — follow the falling notes."),
       el("p", { class: "home-hint" }, "New to piano? Start with Course → “Meet the Keys.”"),
       el("div", { class: "tiles" }, [
         tile("🎓  Course", trackProgressText(window.Course, "Reading lessons, beginner → up"), () => pathView(window.Course, "Course"), "primary"),
+        tile("⏱  Daily Workout", window.Workout.doneToday() ? "Done today ✓ — go again?" : "A quick session keeps the streak", () => workoutView()),
         tile("🎸  Chords", trackProgressText(window.Chords, "Play chords to accompany songs"), () => pathView(window.Chords, "Chords")),
         tile("🎵  Songs", window.Songs.all().filter((s) => !s.exercise).length + " songs to play", () => songList()),
-        tile("📖  Read Notes", "Note-reading practice", () => trainerView()),
+        tile("📖  Read Notes", "Practice + reading tests", () => readNotesMenu()),
         tile("🎹  Free Play", "Just play around", () => freePlay()),
       ]),
       el("div", { class: "home-footer" }, [
@@ -323,29 +368,50 @@
   }
 
   // ---- Song list (grouped by difficulty, like Simply Piano's library) ---
-  function songList() {
+  const GENRES = [
+    ["all", "All"], ["kids", "Kids"], ["folk", "Folk"],
+    ["classical", "Classical"], ["holiday", "Holiday"], ["hymn", "Hymns"], ["pop", "Pop"],
+  ];
+  function songDuration(song) {
+    const beats = song.notes.reduce((t, n) => t + (n.beats || 1), 0);
+    const secs = Math.round((beats / song.tempo) * 60);
+    return secs >= 60 ? Math.round(secs / 60) + " min" : secs + " sec";
+  }
+  function songList(genre) {
+    if (typeof genre !== "string") genre = "all"; // also used as a click handler
     clearView();
     setChrome("Songs", { back: true });
     backBtn.onclick = home;
+
+    const wrap = el("div", { class: "song-wrap" });
+    const chips = el("div", { class: "genre-chips" });
+    GENRES.forEach(([id, label]) => {
+      chips.append(el("button", { class: "chip" + (id === genre ? " active" : ""),
+        onclick: () => songList(id) }, label));
+    });
+    wrap.append(chips);
     const list = el("div", { class: "song-list" });
 
+    const genreLabel = (g) => (GENRES.find(([id]) => id === g) || [])[1] || "";
     const songRow = (song) => {
       const stars = starsFor(song.id);
+      const sub = songDuration(song) + (song.genre ? "  ·  " + genreLabel(song.genre) : "");
       return el("button", { class: "song-row", onclick: () => lesson(song.id) }, [
         el("span", { class: "song-dot diff-" + song.difficulty }, "♪"),
         el("span", { class: "song-meta" }, [
           el("span", { class: "song-title" }, song.title + (song.user ? "  ·  yours" : "")),
-          el("span", { class: "song-sub" }, song.notes.length + " notes"),
+          el("span", { class: "song-sub" }, sub),
         ]),
         el("span", { class: "song-stars" }, starRow(stars)),
       ]);
     };
 
-    const all = window.Songs.all();
+    const all = window.Songs.all().filter((s) => !s.user && !s.exercise && (genre === "all" || s.genre === genre));
     const groups = [
-      { name: "Beginner", test: (s) => !s.user && !s.exercise && s.difficulty <= 1 },
-      { name: "Easy", test: (s) => !s.user && !s.exercise && s.difficulty === 2 },
-      { name: "A bit more", test: (s) => !s.user && !s.exercise && s.difficulty >= 3 },
+      { name: "Beginner", test: (s) => s.difficulty <= 1 },
+      { name: "Easy", test: (s) => s.difficulty === 2 },
+      { name: "A bit more", test: (s) => s.difficulty === 3 },
+      { name: "Hands together", test: (s) => s.difficulty >= 4 },
     ];
     groups.forEach((g) => {
       const songs = all.filter(g.test);
@@ -353,7 +419,9 @@
       list.append(el("h3", { class: "group-head" }, g.name));
       songs.forEach((s) => list.append(songRow(s)));
     });
-    view.append(list);
+    if (!all.length) list.append(el("div", { class: "coming-soon" }, "No songs in this style yet."));
+    wrap.append(list);
+    view.append(wrap);
   }
 
   // ---- Lesson -----------------------------------------------------------
@@ -362,7 +430,7 @@
     if (!song) return songList();
     clearView();
     setChrome(opts.courseTitle || song.title, { back: true });
-    backBtn.onclick = opts.returnTo || songList;
+    backBtn.onclick = opts.onBack || opts.returnTo || songList;
 
     let mode = opts.mode || "step";
     let tempoScale = 1;
@@ -418,11 +486,13 @@
     function begin() {
       engine.load(song, { mode, tempoScale });
       engine.start();
+      startClock();
       startBtn.textContent = "↻ Restart";
       status.textContent = modeHint(mode);
     }
     function finish(res) {
       saveStars(song.id, res.stars);
+      const prevToday = checkpointClock();
       const passed = !opts.passMark || res.accuracy >= opts.passMark;
       if (opts.onDone) opts.onDone(res, passed);
       const cont = opts.returnTo
@@ -437,6 +507,7 @@
           el("div", { class: "big-stars" }, starRow(res.stars)),
           el("div", { class: "result" }, Math.round(res.accuracy * 100) + "% accuracy"),
           passNote,
+          el("div", { class: "result-callout" }, window.Stats.callout(prevToday)),
           el("div", { class: "card-actions" }, opts.returnTo ? [again, cont] : [cont, again]),
         ]),
       ]);
@@ -446,11 +517,226 @@
     engine.load(song, { mode, tempoScale });
   }
 
+  // ---- Onboarding quiz (per player): motivation → experience → daily goal.
+  // Like Simply Piano's intro funnel — three taps, then a recommended plan.
+  function onboardView() {
+    const me = window.Profiles.active();
+    const answers = {};
+    const QUESTIONS = [
+      { key: "goal", title: "Why do you want to play piano?", sub: "There's no wrong answer — this shapes your plan.",
+        options: [["songs", "🎵", "Play songs I love"], ["relax", "🌙", "Relax and unwind"], ["challenge", "🏆", "Challenge myself"]] },
+      { key: "exp", title: "Have you played before?", sub: "We'll start you in the right place.",
+        options: [["new", "🌱", "Brand new"], ["some", "🌿", "I know a little"], ["played", "🌳", "I've played before"]] },
+      { key: "minutes", title: "How long will you practice each day?", sub: "Short and steady beats long and rare.",
+        options: [[5, "⏱", "5 minutes"], [10, "⏲", "10 minutes"], [15, "⏰", "15 minutes"]] },
+    ];
+
+    const ask = (qi) => {
+      if (qi >= QUESTIONS.length) return plan();
+      const q = QUESTIONS[qi];
+      clearView();
+      setChrome("Welcome" + (me ? ", " + me.name : ""), { back: qi > 0 });
+      backBtn.onclick = () => ask(qi - 1);
+      const grid = el("div", { class: "profiles-grid onboard-grid" });
+      q.options.forEach(([val, emoji, label]) => {
+        grid.append(el("button", { class: "profile-card", onclick: () => { answers[q.key] = val; ask(qi + 1); } }, [
+          el("span", { class: "profile-emoji" }, emoji),
+          el("span", { class: "profile-name" }, label),
+        ]));
+      });
+      view.append(el("div", { class: "profiles" }, [
+        el("h2", { class: "profiles-title" }, q.title),
+        el("p", { class: "profiles-sub" }, q.sub),
+        grid,
+        el("button", { class: "foot-btn onboard-skip", onclick: () => { save({ skipped: true }); homeNow(); } }, "Skip for now"),
+      ]));
+    };
+
+    function save(extra) {
+      window.Stats.setOnboard(Object.assign({ done: true }, answers, extra || {}));
+      if (answers.minutes) window.Stats.setGoalMin(answers.minutes);
+    }
+    function homeNow() { home(); }
+
+    function plan() {
+      save();
+      // Recommended starting point by experience.
+      const C = window.Course;
+      let unitIdx = 0, note = "We'll start at the very beginning — Meet the Keys.";
+      if (answers.exp === "some") {
+        unitIdx = C.CURRICULUM.findIndex((u) => u.id === "u4");
+        note = "You know the keys — we'll start you at reading notes.";
+      } else if (answers.exp === "played") {
+        unitIdx = C.CURRICULUM.findIndex((u) => u.id === "i1");
+        note = "Welcome back! We'll start you at the Intermediate tier.";
+      }
+      const extra = answers.goal === "songs"
+        ? " Since you're here to play songs, try the 🎸 Chords path too — it gets you accompanying songs fast."
+        : answers.goal === "relax"
+          ? " Take it at your own pace — Practice mode never rushes you."
+          : " Reading tests and the Daily Workout will keep you sharp.";
+      clearView();
+      setChrome("Your plan", { back: false });
+      view.append(el("div", { class: "profiles" }, [
+        el("h2", { class: "profiles-title" }, "🎹 Your plan is ready" + (me ? ", " + me.name : "")),
+        el("p", { class: "profiles-sub" }, note + extra),
+        el("p", { class: "profiles-sub" }, "Daily goal: " + (answers.minutes || 10) + " minutes — the ⏱ Daily Workout fits it exactly."),
+        el("div", { class: "card-actions" }, [
+          el("button", { class: "chip play", onclick: () => {
+            if (unitIdx > 0) window.Course.unlock(window.Course.CURRICULUM[unitIdx].id);
+            launchUnit(window.Course, Math.max(0, unitIdx), () => pathView(window.Course, "Course"));
+          } }, "▶ Start your first lesson"),
+          el("button", { class: "chip", onclick: () => homeNow() }, "Explore first"),
+        ]),
+      ]));
+    }
+
+    ask(0);
+  }
+
+  // ---- Daily Workout: an auto-built 5/10/15-minute session --------------
+  function workoutView() {
+    clearView();
+    setChrome("Daily Workout", { back: true });
+    backBtn.onclick = home;
+
+    let minutes = (window.Stats.getOnboard() || {}).minutes || 5;
+    const wrap = el("div", { class: "profiles" }, [
+      el("h2", { class: "profiles-title" }, window.Workout.doneToday() ? "Workout done today ✓" : "Today's workout"),
+      el("p", { class: "profiles-sub" }, "A short session built for where you are: a reading warm-up, a song, and chords."
+        + (window.Workout.doneToday() ? " Another round never hurts!" : "")),
+    ]);
+    const seg = el("div", { class: "seg" });
+    const preview = el("div", { class: "song-list workout-preview" });
+    const renderPreview = () => {
+      preview.innerHTML = "";
+      window.Workout.build(minutes).forEach((s, i) => {
+        preview.append(el("div", { class: "song-row locked" }, [
+          el("span", { class: "song-dot" }, s.kind === "song" ? "♪" : "📖"),
+          el("span", { class: "song-meta" }, [
+            el("span", { class: "song-title" }, (i + 1) + ". " + s.title),
+          ]),
+        ]));
+      });
+    };
+    [5, 10, 15].forEach((m) => {
+      const b = el("button", { class: "seg-btn" + (m === minutes ? " active" : ""), onclick: () => {
+        minutes = m;
+        seg.querySelectorAll(".seg-btn").forEach((x) => x.classList.remove("active"));
+        b.classList.add("active");
+        renderPreview();
+      } }, m + " min");
+      seg.append(b);
+    });
+    wrap.append(el("div", { class: "workout-controls" }, [seg,
+      el("button", { class: "chip play", onclick: () => run() }, "▶ Start workout")]));
+    renderPreview();
+    wrap.append(preview);
+    view.append(wrap);
+
+    function run() {
+      const plan = window.Workout.build(minutes);
+      const results = [];
+      const t0 = performance.now();
+      let i = 0;
+
+      const launch = () => {
+        if (i >= plan.length) return summary();
+        const s = plan[i], idx = i;
+        const label = "Workout " + (i + 1) + "/" + plan.length + " — " + s.title;
+        const record = (res) => { results[idx] = res; };
+        const nextSeg = () => { i++; launch(); };
+        const quit = () => workoutView();
+        if (s.kind === "song") {
+          lesson(s.songId, { mode: s.mode, courseTitle: label, returnTo: nextSeg, onBack: quit, onDone: record });
+        } else {
+          trainerView(Object.assign({ title: label, returnTo: nextSeg, onBack: quit, onDone: record },
+            s.trainerOpts));
+        }
+      };
+
+      function summary() {
+        window.Workout.markDone(minutes);
+        clearView();
+        setChrome("Workout complete", { back: true });
+        backBtn.onclick = home;
+        const done = results.filter(Boolean);
+        const avg = done.length ? done.reduce((t, r) => t + (r.accuracy || 0), 0) / done.length : 0;
+        const mins = Math.max(1, Math.round((performance.now() - t0) / 60000));
+        const list = el("div", { class: "song-list" });
+        plan.forEach((s, j) => {
+          const r = results[j];
+          list.append(el("div", { class: "song-row" }, [
+            el("span", { class: "song-dot" + (r ? " unit done" : "") }, r ? "✓" : "–"),
+            el("span", { class: "song-meta" }, [
+              el("span", { class: "song-title" }, s.title),
+              el("span", { class: "song-sub" }, r ? Math.round((r.accuracy || 0) * 100) + "%" : "skipped"),
+            ]),
+            el("span", { class: "song-stars" }, r ? starRow(r.stars || 0) : ""),
+          ]));
+        });
+        view.append(el("div", { class: "profiles" }, [
+          el("h2", { class: "profiles-title" }, "🎉 Workout complete!"),
+          el("p", { class: "profiles-sub" }, Math.round(avg * 100) + "% average  ·  about " + mins + " min  ·  " + window.Stats.callout()),
+          list,
+          el("div", { class: "card-actions" }, [
+            el("button", { class: "chip play", onclick: () => home() }, "Done"),
+            el("button", { class: "chip", onclick: () => workoutView() }, "Go again"),
+          ]),
+        ]));
+      }
+
+      launch();
+    }
+  }
+
+  // ---- Read Notes menu: practice (streak drill) or a longer test --------
+  function readNotesMenu() {
+    clearView();
+    setChrome("Read Notes", { back: true });
+    backBtn.onclick = home;
+    const wrap = el("div", { class: "song-list" });
+
+    wrap.append(el("h3", { class: "group-head" }, "Practice"));
+    wrap.append(el("button", { class: "song-row", onclick: () => trainerView({ returnTo: readNotesMenu }) }, [
+      el("span", { class: "song-dot" }, "📖"),
+      el("span", { class: "song-meta" }, [
+        el("span", { class: "song-title" }, "Endless practice"),
+        el("span", { class: "song-sub" }, "Range grows as your streak builds — no pressure"),
+      ]),
+    ]));
+
+    const TESTS = [
+      { label: "30 notes", promptCount: 30 }, { label: "60 notes", promptCount: 60 },
+      { label: "100 notes", promptCount: 100 }, { label: "2 minutes", timeLimit: 120 },
+      { label: "5 minutes", timeLimit: 300 },
+    ];
+    [["treble", "Treble clef tests"], ["bass", "Bass clef tests"]].forEach(([clef, head]) => {
+      wrap.append(el("h3", { class: "group-head" }, head));
+      const chips = el("div", { class: "genre-chips test-chips" });
+      TESTS.forEach((t) => {
+        const testId = clef + "-" + (t.promptCount || (t.timeLimit / 60) + "min");
+        let bests = {}; try { bests = JSON.parse(localStorage.getItem(window.Profiles.key("piano.trainerBest"))) || {}; } catch {}
+        const b = bests[testId];
+        chips.append(el("button", { class: "chip", onclick: () => trainerView({
+          title: (clef === "bass" ? "Bass" : "Treble") + " test — " + t.label,
+          promptCount: t.promptCount, timeLimit: t.timeLimit,
+          showKey: false, clef, testId, returnTo: readNotesMenu,
+          kbStart: clef === "bass" ? 48 : 60, kbOctaves: 2,
+          fixedNotes: clef === "bass" ? [48, 50, 52, 53, 55, 57, 59, 60] : null,
+        }) }, t.label + (b ? " · " + b.pct + "%" : "")));
+      });
+      wrap.append(chips);
+    });
+    wrap.append(el("p", { class: "profiles-sub" }, "Tests don't show the key hint and don't repeat misses — they measure how fluently you read. Your best score is saved."));
+    view.append(wrap);
+  }
+
   // ---- Note-reading trainer --------------------------------------------
   function trainerView(opts = {}) {
     clearView();
     setChrome(opts.title || "Read Notes", { back: true });
-    backBtn.onclick = opts.returnTo || home;
+    backBtn.onclick = opts.onBack || opts.returnTo || home;
 
     const stats = el("div", { class: "trainer-stats" }, "Play the note you see");
     const svg = svgEl();
@@ -468,10 +754,20 @@
       fixedNotes: opts.fixedNotes || null,
       goal: opts.goal || null,
       showKey: opts.showKey !== false,
+      promptCount: opts.promptCount || null,
+      timeLimit: opts.timeLimit || null,
       onUpdate: (s) => {
-        stats.textContent = opts.goal
-          ? (opts.prompt || "Name the note") + " — " + s.correct + "/" + s.goal + "  ·  " + s.accuracy + "%"
-          : "Level " + s.level + "  ·  ✓ " + s.correct + "/" + s.total + "  ·  streak " + s.streak + "  ·  " + s.accuracy + "%";
+        if (opts.promptCount || opts.timeLimit) {
+          const parts = [];
+          if (opts.promptCount) parts.push("Note " + Math.min(s.prompts, opts.promptCount) + "/" + opts.promptCount);
+          if (s.timeLeft != null) parts.push("⏱ " + Math.floor(s.timeLeft / 60) + ":" + String(s.timeLeft % 60).padStart(2, "0"));
+          parts.push("✓ " + s.firstTry + "/" + s.answered + "  ·  " + s.accuracy + "%");
+          stats.textContent = parts.join("  ·  ");
+        } else if (opts.goal) {
+          stats.textContent = (opts.prompt || "Name the note") + " — " + s.correct + "/" + s.goal + "  ·  " + s.accuracy + "%";
+        } else {
+          stats.textContent = "Level " + s.level + "  ·  ✓ " + s.correct + "/" + s.total + "  ·  streak " + s.streak + "  ·  " + s.accuracy + "%";
+        }
       },
       onDone: (res) => finish(res),
     });
@@ -488,17 +784,37 @@
     view.append(el("div", { class: "lesson" }, [controls, stats, staff, kbWrap]));
 
     function finish(res) {
+      const prevToday = checkpointClock();
       const passed = !opts.passMark || res.accuracy >= opts.passMark;
       if (opts.onDone) opts.onDone(res, passed);
       const pct = Math.round((res.accuracy || 0) * 100);
       const actions = [];
       actions.push(el("button", { class: "chip", onclick: () => { overlay.remove(); restart(); } }, "Try again"));
       if (opts.returnTo) actions.push(el("button", { class: "chip play", onclick: () => { overlay.remove(); opts.returnTo(); } }, passed ? "Continue ›" : "Back"));
+      // Test results: time, speed, and a saved personal best per test id.
+      let testLines = null;
+      if (res.elapsedMs != null) {
+        const secs = Math.round(res.elapsedMs / 1000);
+        const time = Math.floor(secs / 60) + ":" + String(secs % 60).padStart(2, "0");
+        let bestNote = "";
+        if (opts.testId) {
+          const bKey = window.Profiles.key("piano.trainerBest");
+          let bests = {}; try { bests = JSON.parse(localStorage.getItem(bKey)) || {}; } catch {}
+          const prev = bests[opts.testId];
+          const better = !prev || pct > prev.pct || (pct === prev.pct && res.notesPerMin > prev.npm);
+          if (better) { bests[opts.testId] = { pct, npm: res.notesPerMin }; localStorage.setItem(bKey, JSON.stringify(bests)); }
+          bestNote = better ? "  ·  🏆 New personal best!" : "  ·  best: " + prev.pct + "% at " + prev.npm + "/min";
+        }
+        testLines = el("div", { class: "result-sub" },
+          res.firstTry + "/" + res.prompts + " first try  ·  " + time + "  ·  " + res.notesPerMin + " notes/min" + bestNote);
+      }
       const overlay = el("div", { class: "overlay" }, [
         el("div", { class: "card" }, [
           el("div", { class: "big-stars" }, starRow(res.stars)),
-          el("div", { class: "result" }, res.correct + "/" + res.total + " correct · " + pct + "%"),
+          el("div", { class: "result" }, res.elapsedMs != null ? pct + "% accuracy" : res.correct + "/" + res.total + " correct · " + pct + "%"),
+          testLines,
           opts.passMark ? el("div", { class: "result-sub" }, passed ? "Passed! (80%+)" : "Reach 80% to pass — give it another go.") : null,
+          el("div", { class: "result-callout" }, window.Stats.callout(prevToday)),
           el("div", { class: "card-actions" }, actions),
         ]),
       ]);
@@ -507,6 +823,7 @@
     function restart() { trainerView(opts); }
 
     trainer.start();
+    startClock();
   }
 
   // ---- Free play --------------------------------------------------------
@@ -576,6 +893,7 @@
 
     layout();
     window._relayout = layout; // recompute key count on resize/orientation change
+    startClock(); // free play counts as practice too
   }
 
   // Unlock audio on first gesture (iOS requirement).

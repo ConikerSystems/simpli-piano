@@ -38,7 +38,7 @@
     // Migrate any pre-profiles global progress to the very first player created,
     // so early testing progress isn't stranded.
     if (firstEver) {
-      ["piano.progress", "piano.course"].forEach((base) => {
+      ["piano.progress", "piano.course", "piano.chords"].forEach((base) => {
         const old = localStorage.getItem(base);
         if (old != null && localStorage.getItem(base + "." + id) == null) {
           localStorage.setItem(base + "." + id, old);
@@ -55,7 +55,8 @@
 
   function remove(id) {
     data.list = data.list.filter((p) => p.id !== id);
-    ["piano.progress", "piano.course"].forEach((b) => localStorage.removeItem(b + "." + id));
+    ["piano.progress", "piano.course", "piano.chords", "piano.stats", "piano.onboard",
+     "piano.workout", "piano.trainerBest"].forEach((b) => localStorage.removeItem(b + "." + id));
     if (data.activeId === id) data.activeId = data.list[0] ? data.list[0].id : null;
     persist();
   }

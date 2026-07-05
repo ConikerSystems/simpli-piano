@@ -92,69 +92,16 @@
     return { lo, hi };
   }
 
-  function makeSong({ id, title, difficulty = 1, tempo = 90, hand = "right", src, exercise = false }) {
+  function makeSong({ id, title, difficulty = 1, tempo = 90, hand = "right", src, exercise = false, genre = "folk" }) {
     const { notes, errors } = parseSong(src);
     if (errors.length) console.warn("Song", id, "has bad tokens:", errors);
-    return { id, title, difficulty, tempo, hand, notes, exercise };
+    return { id, title, difficulty, tempo, hand, notes, exercise, genre };
   }
 
-  // ---- Starter library (public-domain, beginner ramp) -------------------
-  const LIBRARY = [
-    makeSong({ id: "hot-cross-buns", title: "Hot Cross Buns", difficulty: 1, tempo: 80,
-      src: "E D Ch E D Ch C C C C D D D D E D Ch" }),
-    makeSong({ id: "mary-lamb", title: "Mary Had a Little Lamb", difficulty: 1, tempo: 90,
-      src: "E D C D E E Eh D D Dh E G Gh E D C D E E E E D D E D Cw" }),
-    makeSong({ id: "twinkle", title: "Twinkle Twinkle Little Star", difficulty: 2, tempo: 100,
-      src: "C C G G A A Gh F F E E D D Ch G G F F E E Dh G G F F E E Dh "
-         + "C C G G A A Gh F F E E D D Cw" }),
-    makeSong({ id: "ode-to-joy", title: "Ode to Joy", difficulty: 2, tempo: 100,
-      src: "E E F G G F E D C C D E E D Dh E E F G G F E D C C D E D C Ch" }),
-    makeSong({ id: "lightly-row", title: "Lightly Row", difficulty: 2, tempo: 100,
-      src: "G E E F D D Ch D E F G Gh G E E F D D C E G G Cw" }),
-    makeSong({ id: "au-clair", title: "Au Clair de la Lune", difficulty: 1, tempo: 90,
-      src: "C C C D Eh Dh C E D D Cw" }),
-    makeSong({ id: "old-macdonald", title: "Old MacDonald", difficulty: 1, tempo: 100,
-      src: "G G G D E E Dh B B A A Gw" }),
-    makeSong({ id: "london-bridge", title: "London Bridge", difficulty: 1, tempo: 100,
-      src: "G A G F E F Gh D E Fh E F Gh" }),
-    makeSong({ id: "frere-jacques", title: "Frère Jacques", difficulty: 2, tempo: 100,
-      src: "C D E C C D E C E F Gh E F Gh G A G F E Ch G A G F E Ch" }),
-    makeSong({ id: "when-the-saints", title: "When the Saints Go Marching In", difficulty: 2, tempo: 100,
-      src: "C E F Gw C E F Gw C E F G E C E Dw" }),
-    makeSong({ id: "row-your-boat", title: "Row, Row, Row Your Boat", difficulty: 2, tempo: 100,
-      src: "C C C D E E D E F Gh C5 C5 C5 G G G E E E C C C G F E D Cw" }),
-    makeSong({ id: "jingle-bells", title: "Jingle Bells", difficulty: 3, tempo: 110,
-      src: "E E Eh E E Eh E G C D Ew F F F F F E E E E D D E Dh Gh" }),
-    // ---- Intermediate exercises (left hand / scales / chords / both hands) ----
-    makeSong({ id: "lh-warmup", title: "Left-Hand Warm-Up", difficulty: 2, tempo: 90, hand: "left", exercise: true,
-      src: "C3 D E F G F E D Cw" }),
-    makeSong({ id: "c-scale", title: "C Major Scale", difficulty: 2, tempo: 100, exercise: true,
-      src: "C4 D4 E4 F4 G4 A4 B4 C5 B4 A4 G4 F4 E4 D4 C4w" }),
-    makeSong({ id: "hands-together", title: "Hands Together", difficulty: 3, tempo: 80, hand: "both", exercise: true,
-      src: "C3+C4 C3+D4 C3+E4 C3+F4 C3+G4h G3+G4 G3+F4 G3+E4 G3+D4 G3+C4h" }),
-    makeSong({ id: "triads-cfg", title: "First Chords: C F G", difficulty: 3, tempo: 80, hand: "both", exercise: true,
-      src: "C4+E4+G4h F4+A4+C5h G4+B4+D5h C4+E4+G4h" }),
-
-    // ---- Chords path exercises (tap the whole chord) ----
-    makeSong({ id: "chord-c", title: "C major chord", difficulty: 1, tempo: 60, hand: "right", exercise: true,
-      src: "C4+E4+G4w C4+E4+G4w C4+E4+G4w C4+E4+G4w" }),
-    makeSong({ id: "chord-g", title: "G major chord", difficulty: 1, tempo: 60, hand: "right", exercise: true,
-      src: "G4+B4+D5w G4+B4+D5w G4+B4+D5w G4+B4+D5w" }),
-    makeSong({ id: "chord-f", title: "F major chord", difficulty: 1, tempo: 60, hand: "right", exercise: true,
-      src: "F4+A4+C5w F4+A4+C5w F4+A4+C5w F4+A4+C5w" }),
-    makeSong({ id: "switch-cg", title: "Switch C and G", difficulty: 2, tempo: 60, hand: "right", exercise: true,
-      src: "C4+E4+G4h G4+B4+D5h C4+E4+G4h G4+B4+D5h C4+E4+G4h G4+B4+D5h C4+E4+G4w" }),
-    makeSong({ id: "switch-cf", title: "Switch C and F", difficulty: 2, tempo: 60, hand: "right", exercise: true,
-      src: "C4+E4+G4h F4+A4+C5h C4+E4+G4h F4+A4+C5h C4+E4+G4h F4+A4+C5h C4+E4+G4w" }),
-    makeSong({ id: "minor-chords", title: "A minor & E minor", difficulty: 2, tempo: 60, hand: "right", exercise: true,
-      src: "A4+C5+E5h E4+G4+B4h A4+C5+E5h E4+G4+B4h A4+C5+E5w" }),
-    makeSong({ id: "prog-145", title: "C – F – G", difficulty: 2, tempo: 70, hand: "right", exercise: true,
-      src: "C4+E4+G4h F4+A4+C5h G4+B4+D5h C4+E4+G4h" }),
-    makeSong({ id: "prog-4chord", title: "C – G – Am – F", difficulty: 3, tempo: 70, hand: "right", exercise: true,
-      src: "C4+E4+G4h G4+B4+D5h A4+C5+E5h F4+A4+C5h C4+E4+G4h G4+B4+D5h A4+C5+E5h F4+A4+C5h" }),
-    makeSong({ id: "prog-50s", title: "C – Am – F – G", difficulty: 3, tempo: 70, hand: "right", exercise: true,
-      src: "C4+E4+G4h A4+C5+E5h F4+A4+C5h G4+B4+D5h C4+E4+G4h A4+C5+E5h F4+A4+C5h G4+B4+D5h" }),
-  ];
+  // ---- Built-in library ---------------------------------------------------
+  // Song DATA lives in static/js/library.js (window.SongData) so adding songs
+  // is a data-only change; this file owns the parsing/model.
+  const LIBRARY = (window.SongData || []).map(makeSong);
 
   // ---- User songs (localStorage) ----------------------------------------
   const USER_KEY = "piano.userSongs";
