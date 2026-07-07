@@ -252,6 +252,8 @@ a.chip { text-decoration: none; display: inline-flex; align-items: center; }
 
 /* ---- "Which finger?" hands overlay (typing-tutor style) ---- */
 .kb-wrap.has-hands { position: relative; }
+/* Taller keys while the hands are shown — room to rest the hand on them. */
+.kb-wrap.hands-on:not(.grow) { height: clamp(200px, 38vh, 340px); }
 .hands-overlay {
   position: absolute; top: 10px; left: 14px; right: 14px; bottom: 14px;
   pointer-events: none; z-index: 3;

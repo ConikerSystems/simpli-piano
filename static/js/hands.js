@@ -86,9 +86,9 @@
     const wristL = X(21), wristR = c5 + 2.0 * u;
 
     // ---- Unified silhouette (clockwise from the left wrist corner) ----
-    let d = "M " + P(wristL, ys(108));
+    let d = "M " + P(wristL, ys(106));
     // palm left edge rising to the thumb's root
-    d += C(X(19), ys(103), X(16.5), ys(99), X(15), ys(95.5));
+    d += C(X(19), ys(102), X(16.5), ys(99), X(15), ys(95.5));
     // thumb outer edge — S-curve with a visible bend at the base joint
     d += C(X(12), ys(92), c1 - 4.5 * u, ys(86.5), c1 - 5.5 * u, ys(81.5));
     d += C(c1 - 5.9 * u, ys(79), c1 - 5.9 * u, ys(76.5), c1 - 4.6 * u, ys(74.4));
@@ -97,43 +97,45 @@
     // inner thumb edge back down, then the thumb–index web
     d += C(c1 + 4.8 * u, ys(73.8), c1 + 5.3 * u, ys(76.4), c1 + 4.7 * u, ys(79));
     d += C(c1 + 6.4 * u, ys(85.5), X(20.4), ys(88.5), c2 - HWB[0] - 0.2 * u, ys(90));
-    // index finger: bowed left edge up, rounded tip, right edge into web 1
-    d += C(c2 - HWB[0] - 0.4 * u, ys(83), c2 - HWB[0], ys(66), c2 - HWT[0], ys(TIPY[0] + 5.2));
-    d += C(c2 - HWT[0], ys(TIPY[0] + 1.7), c2 - HWT[0] * 0.67, ys(TIPY[0] - 0.2), c2, ys(TIPY[0] - 0.2));
-    d += C(c2 + HWT[0] * 0.67, ys(TIPY[0] - 0.2), c2 + HWT[0], ys(TIPY[0] + 1.7), c2 + HWT[0], ys(TIPY[0] + 5.2));
-    d += C(c2 + HWT[0] + 0.6 * u, ys(66), c2 + HWB[0], ys(77), c2 + HWB[0] + 0.4 * u, ys(81.4));
+    // index finger: knuckle bulge low, taper to a blunt tip, into web 1
+    d += C(c2 - HWB[0] - 1.1 * u, ys(80), c2 - HWB[0] + 0.2 * u, ys(66), c2 - HWT[0], ys(TIPY[0] + 5.2));
+    d += C(c2 - HWT[0], ys(TIPY[0] + 1.7), c2 - HWT[0] * 0.78, ys(TIPY[0] - 0.2), c2, ys(TIPY[0] - 0.2));
+    d += C(c2 + HWT[0] * 0.78, ys(TIPY[0] - 0.2), c2 + HWT[0], ys(TIPY[0] + 1.7), c2 + HWT[0], ys(TIPY[0] + 5.2));
+    d += C(c2 + HWT[0] + 0.2 * u, ys(66), c2 + HWB[0] + 1.0 * u, ys(78), c2 + HWB[0] + 0.4 * u, ys(81.4));
     // web valley 1 — a smooth U spanning the whole gap (no flat deck)
     let gL = VX[0] - (c2 + HWB[0]), gR = (c3 - HWB[1]) - VX[0];
     d += C(c2 + HWB[0] + gL * 0.4, ys(VY[0] - 0.8), VX[0] - gL * 0.35, ys(VY[0]), VX[0], ys(VY[0]));
     d += C(VX[0] + gR * 0.35, ys(VY[0]), c3 - HWB[1] - gR * 0.4, ys(VY[0] - 0.8), c3 - HWB[1] - 0.2 * u, ys(81.4));
     // middle finger
-    d += C(c3 - HWB[1], ys(64), c3 - HWB[1] + 0.2 * u, ys(58), c3 - HWT[1], ys(TIPY[1] + 5.4));
-    d += C(c3 - HWT[1], ys(TIPY[1] + 1.7), c3 - HWT[1] * 0.67, ys(TIPY[1] - 0.2), c3, ys(TIPY[1] - 0.2));
-    d += C(c3 + HWT[1] * 0.67, ys(TIPY[1] - 0.2), c3 + HWT[1], ys(TIPY[1] + 1.7), c3 + HWT[1], ys(TIPY[1] + 5.4));
-    d += C(c3 + HWT[1] + 0.6 * u, ys(64), c3 + HWB[1], ys(79), c3 + HWB[1] + 0.4 * u, ys(82.2));
+    d += C(c3 - HWB[1] - 0.7 * u, ys(70), c3 - HWB[1] + 0.3 * u, ys(58), c3 - HWT[1], ys(TIPY[1] + 5.4));
+    d += C(c3 - HWT[1], ys(TIPY[1] + 1.7), c3 - HWT[1] * 0.78, ys(TIPY[1] - 0.2), c3, ys(TIPY[1] - 0.2));
+    d += C(c3 + HWT[1] * 0.78, ys(TIPY[1] - 0.2), c3 + HWT[1], ys(TIPY[1] + 1.7), c3 + HWT[1], ys(TIPY[1] + 5.4));
+    d += C(c3 + HWT[1] + 0.2 * u, ys(64), c3 + HWB[1] + 1.0 * u, ys(79), c3 + HWB[1] + 0.4 * u, ys(82.2));
     // web valley 2
     gL = VX[1] - (c3 + HWB[1]); gR = (c4 - HWB[2]) - VX[1];
     d += C(c3 + HWB[1] + gL * 0.4, ys(VY[1] - 0.8), VX[1] - gL * 0.35, ys(VY[1]), VX[1], ys(VY[1]));
     d += C(VX[1] + gR * 0.35, ys(VY[1]), c4 - HWB[2] - gR * 0.4, ys(VY[1] - 0.8), c4 - HWB[2] - 0.2 * u, ys(82.2));
     // ring finger
-    d += C(c4 - HWB[2], ys(72), c4 - HWB[2] + 0.2 * u, ys(62), c4 - HWT[2], ys(TIPY[2] + 5));
-    d += C(c4 - HWT[2], ys(TIPY[2] + 1.4), c4 - HWT[2] * 0.67, ys(TIPY[2] - 0.5), c4, ys(TIPY[2] - 0.5));
-    d += C(c4 + HWT[2] * 0.67, ys(TIPY[2] - 0.5), c4 + HWT[2], ys(TIPY[2] + 1.4), c4 + HWT[2], ys(TIPY[2] + 5));
-    d += C(c4 + HWT[2] + 0.5 * u, ys(68), c4 + HWB[2], ys(81.5), c4 + HWB[2] + 0.4 * u, ys(83.8));
+    d += C(c4 - HWB[2] - 0.7 * u, ys(76), c4 - HWB[2] + 0.3 * u, ys(62), c4 - HWT[2], ys(TIPY[2] + 5));
+    d += C(c4 - HWT[2], ys(TIPY[2] + 1.4), c4 - HWT[2] * 0.78, ys(TIPY[2] - 0.5), c4, ys(TIPY[2] - 0.5));
+    d += C(c4 + HWT[2] * 0.78, ys(TIPY[2] - 0.5), c4 + HWT[2], ys(TIPY[2] + 1.4), c4 + HWT[2], ys(TIPY[2] + 5));
+    d += C(c4 + HWT[2] + 0.2 * u, ys(68), c4 + HWB[2] + 0.9 * u, ys(81.5), c4 + HWB[2] + 0.4 * u, ys(83.8));
     // web valley 3
     gL = VX[2] - (c4 + HWB[2]); gR = (c5 - HWB[3]) - VX[2];
     d += C(c4 + HWB[2] + gL * 0.4, ys(VY[2] - 0.8), VX[2] - gL * 0.35, ys(VY[2]), VX[2], ys(VY[2]));
     d += C(VX[2] + gR * 0.35, ys(VY[2]), c5 - HWB[3] - gR * 0.4, ys(VY[2] - 0.8), c5 - HWB[3] - 0.2 * u, ys(83.8));
     // pinky — short and low
-    d += C(c5 - HWB[3], ys(77.5), c5 - HWB[3] + 0.2 * u, ys(71), c5 - HWT[3], ys(TIPY[3] + 4.4));
-    d += C(c5 - HWT[3], ys(TIPY[3] + 1.3), c5 - HWT[3] * 0.64, ys(TIPY[3] - 0.4), c5, ys(TIPY[3] - 0.4));
-    d += C(c5 + HWT[3] * 0.64, ys(TIPY[3] - 0.4), c5 + HWT[3], ys(TIPY[3] + 1.3), c5 + HWT[3], ys(TIPY[3] + 4.4));
+    d += C(c5 - HWB[3] - 0.6 * u, ys(80), c5 - HWB[3] + 0.3 * u, ys(71), c5 - HWT[3], ys(TIPY[3] + 4.4));
+    d += C(c5 - HWT[3], ys(TIPY[3] + 1.3), c5 - HWT[3] * 0.75, ys(TIPY[3] - 0.4), c5, ys(TIPY[3] - 0.4));
+    d += C(c5 + HWT[3] * 0.75, ys(TIPY[3] - 0.4), c5 + HWT[3], ys(TIPY[3] + 1.3), c5 + HWT[3], ys(TIPY[3] + 4.4));
     // pinky outer edge flows continuously into the palm's right side + wrist
     d += C(c5 + 5.2 * u, ys(72.5), c5 + 6.2 * u, ys(80), c5 + 6.8 * u, ys(85));
     d += C(c5 + 7.6 * u, ys(89), c5 + 7.4 * u, ys(95), c5 + 6.0 * u, ys(99.5));
-    d += C(c5 + 5.0 * u, ys(103.5), c5 + 3.4 * u, ys(106.5), wristR, ys(108));
-    // softly sagging wrist bottom, back to the start
-    d += C(wristR - (wristR - wristL) * 0.25, ys(111), wristL + (wristR - wristL) * 0.25, ys(111), wristL, ys(108));
+    d += C(c5 + 5.0 * u, ys(102.5), c5 + 3.8 * u, ys(104.5), wristR, ys(106));
+    // forearm runs off the bottom edge (the sleeve cuff covers the join)
+    d += C(wristR - 0.4 * u, ys(112), wristR - 1.2 * u, ys(118), wristR - 1.6 * u, ys(126));
+    d += " L " + P(wristL + 1.6 * u, ys(126));
+    d += C(wristL + 1.2 * u, ys(118), wristL + 0.4 * u, ys(112), wristL, ys(106));
     d += " Z";
 
     // ---- Fingernails (thumb's is rotated with the thumb's tilt) ----
@@ -157,11 +159,12 @@
       cr += "M " + P(vx, ys(VY[i] + 1.2)) + " Q " + P(vx - 0.5 * u, ys(VY[i] + 4.5)) + " " + P(vx - 1.0 * u, ys(VY[i] + 7)) + " ";
     });
 
-    // ---- Sleeve cuff across the wrist ----
-    const cf = "M " + P(wristL - 1.0 * u, ys(104.5))
-      + " Q " + P(X(56), ys(108.8)) + " " + P(wristR + 0.6 * u, ys(104.5))
-      + " L " + P(wristR + 0.4 * u, ys(112))
-      + " L " + P(wristL - 0.8 * u, ys(112)) + " Z";
+    // ---- Sleeve cuff — a band over the forearm, arched top edge (like the
+    // reference art's sleeves), running off the bottom with the arm ----
+    const cf = "M " + P(wristL - 1.4 * u, ys(112))
+      + " Q " + P((wristL + wristR) / 2, ys(106.5)) + " " + P(wristR + 1.4 * u, ys(112))
+      + " L " + P(wristR + 0.6 * u, ys(128))
+      + " L " + P(wristL - 0.6 * u, ys(128)) + " Z";
 
     // ---- Whole-finger glow regions (finger number → closed path) ----
     const hl = {};
@@ -169,8 +172,8 @@
       const x = FC[i], ht = HWT[i], hb = HWB[i], tip = TIPY[i];
       hl[i + 2] = "M " + P(x - hb, ys(90.5))
         + C(x - hb, ys(72), x - hb + 0.2 * u, ys(60), x - ht, ys(tip + 5))
-        + C(x - ht, ys(tip + 1.6), x - ht * 0.67, ys(tip - 0.2), x, ys(tip - 0.2))
-        + C(x + ht * 0.67, ys(tip - 0.2), x + ht, ys(tip + 1.6), x + ht, ys(tip + 5))
+        + C(x - ht, ys(tip + 1.6), x - ht * 0.78, ys(tip - 0.2), x, ys(tip - 0.2))
+        + C(x + ht * 0.78, ys(tip - 0.2), x + ht, ys(tip + 1.6), x + ht, ys(tip + 5))
         + C(x + ht, ys(60), x + hb, ys(72), x + hb, ys(90.5))
         + C(x + hb * 0.6, ys(93.5), x - hb * 0.6, ys(93.5), x - hb, ys(90.5)) + " Z";
     }
@@ -252,7 +255,12 @@
       this.render();
     }
 
-    setOn(on) { this.on = on; this.overlay.style.display = on ? "" : "none"; }
+    setOn(on) {
+      this.on = on;
+      this.overlay.style.display = on ? "" : "none";
+      // With hands on, the keyboard area grows (CSS) so the hand has room.
+      this.wrap.classList.toggle("hands-on", on);
+    }
 
     render() {
       this.overlay.innerHTML = "";
@@ -292,12 +300,12 @@
         const f2midi = {}; placed.forEach((p) => (f2midi[p.finger] = p.midi));
 
         const svg = document.createElementNS(SVGNS, "svg");
-        // Headroom above the keys (tall hands) + room below for the wrist.
-        svg.setAttribute("viewBox", "0 " + (-Math.ceil(H * 0.15)) + " " + Math.ceil(spanW) + " " + Math.ceil(H * 1.23));
+        // Headroom above the keys (tall hands) + room below for the forearm.
+        svg.setAttribute("viewBox", "0 " + (-Math.ceil(H * 0.15)) + " " + Math.ceil(spanW) + " " + Math.ceil(H * 1.35));
         svg.setAttribute("preserveAspectRatio", "none");
         svg.setAttribute("class", "hand-svg");
         svg.style.top = "-15%";
-        svg.style.height = "123%";
+        svg.style.height = "135%";
         svg.style.left = (spanL / W) * 100 + "%";
         svg.style.width = (spanW / W) * 100 + "%";
         if (handKey === "left") svg.style.transform = "scaleX(-1)";

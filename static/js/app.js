@@ -84,7 +84,7 @@
       const h = getHands();
       if (h) h.setOn(on);
       b.classList.toggle("active", on);
-    } }, "🖐 Fingers");
+    } }, "🖐 Hands");
     return b;
   }
   // Five-finger mapping for a song: anchor each hand on the C of the octave

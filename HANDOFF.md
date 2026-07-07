@@ -2,7 +2,16 @@
 
 _Updated: 2026-07-07_
 
-## Latest — v1.8.10 (sw cache v43): Fingers overlay defaults OFF
+## Latest — v1.8.11 (sw cache v44): whole-hand look + taller keys
+Per Joe (with the typing.com reference pic): toggle renamed **🖐 Hands** (his final call —
+was Fingers). Artwork moved closer to the reference: knuckle bulges low on each finger,
+blunter curled-looking tips (rounder tip curves), forearm now runs off the bottom edge with
+an arched sleeve cuff over it (viewBox extended to 135% height). NEW: while hands are ON,
+`.kb-wrap.hands-on:not(.grow)` grows the keyboard to clamp(200px, 38vh, 340px) — longer
+keys so the hand has room, as he asked ("make the piano keys longer"). Free Play `.grow`
+is exempt. Verified mobile+tablet, glow-follow, 0 console errors.
+
+## Previous — v1.8.10 (sw cache v43): Fingers overlay defaults OFF
 Joe: fingers should be toggled off by default on all pages; the user turns them on.
 `handsOn()` in app.js now defaults false (`piano.showHands === "1"`); the 🖐 Fingers chip
 turns it on and the choice persists device-wide. Verified fresh-user default off in
