@@ -3,7 +3,7 @@
 _Updated: 2026-07-06_
 
 ## Where things stand
-**v1.8.2 (sw cache v35)** — added the **🖐 Fingers hands overlay** (typing-tutor style, Joe's
+**v1.8.3 (sw cache v36)** — added the **🖐 Fingers hands overlay** (typing-tutor style, Joe's
 request from a typing.com screenshot): `static/js/hands.js` draws two semi-transparent
 cartoon hands over the on-screen keyboard — a single natural SVG hand silhouette per hand
 (curved fingers of different lengths, opposed thumb, palm + wrist; authored for the right
@@ -12,7 +12,11 @@ to keys; left hand is the same path mirrored). Numbered fingertip badges (thumb 
 sit on the finger pads over the white-key touch area. The target key's fingertip lights
 up with the key (hands.js patches the keyboard instance's highlight/flash/clear/render).
 Joe reviewed the first blocky-capsule version and asked for a natural hand like the
-typing.com picture — the silhouette version is what shipped.
+typing.com picture — the silhouette version is what shipped, then polished further on his
+"improve this further": tapered fingers, knuckle/palm crease lines, vertical skin gradient
+(unique per-svg gradient id), drop-shadow depth, and a sleeve cuff at the wrist. The whole
+hand fits inside the keyboard footprint (viewBox 0 0 100 107, svg height 107% — the wrist
+sits in the kb-wrap's bottom padding; anything taller gets clipped by the view).
 Toggle chip "🖐 Fingers" in Lessons, Read Notes, and Free Play; preference persists
 (`piano.showHands`, device-wide, default ON). Mapping: songs anchor on the C of the octave
 with the most notes (`fingerMapForSong` in app.js; "both" splits at middle C → two hands),

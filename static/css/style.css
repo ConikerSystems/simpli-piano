@@ -256,11 +256,22 @@ a.chip { text-decoration: none; display: inline-flex; align-items: center; }
   position: absolute; top: 10px; left: 14px; right: 14px; bottom: 14px;
   pointer-events: none; z-index: 3;
 }
-.hand-svg { position: absolute; top: 0; height: 112%; }
-.hand-svg path {
-  fill: rgba(233, 184, 143, 0.45);
-  stroke: rgba(150, 98, 58, 0.6);
+.hand-svg { position: absolute; top: 0; height: 107%; filter: drop-shadow(0 3px 5px rgba(0,0,0,0.35)); }
+.hand-svg .hand-shape {
+  stroke: rgba(150, 98, 58, 0.65);
   stroke-width: 1.6;
+  stroke-linejoin: round;
+}
+.hand-svg .hand-crease {
+  fill: none;
+  stroke: rgba(122, 72, 36, 0.4);
+  stroke-width: 1;
+  stroke-linecap: round;
+}
+.hand-svg .hand-cuff {
+  fill: rgba(110, 150, 230, 0.55);
+  stroke: rgba(84, 112, 190, 0.6);
+  stroke-width: 1.2;
   stroke-linejoin: round;
 }
 .hand-tip {

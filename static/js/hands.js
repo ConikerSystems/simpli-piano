@@ -30,44 +30,57 @@
   // Natural right-hand silhouette (see geometry note above): wrist → outer
   // thumb edge → thumb tip → crotch → index/middle/ring/pinky with rounded
   // tips and webbed valleys → outer palm → wrist.
+  // Hand silhouette — fingers taper toward rounded tips, edges bow gently.
   const HAND_PATH =
     "M 16 104" +
-    " C 14 98, 9 92, 7 86" +
-    " C 5.5 82.5, 4.6 79.5, 5 77" +
-    " C 5.6 73, 9 71, 12.4 72.5" +
+    " C 14 98, 9 92, 7 86" +            // outer palm edge up
+    " C 5.5 82.5, 4.6 79.5, 5 77" +     // outer thumb edge
+    " C 5.6 73, 9 71, 12.4 72.5" +      // thumb tip
     " C 14.6 73.7, 15.6 76, 15.2 78.5" +
-    " C 17 84, 20.5 89.5, 24.8 92.5" +
-    " C 25.3 88, 25.4 72, 25.4 57.6" +
-    " C 25.4 53.4, 27.3 51.4, 30 51.4" +
-    " C 32.7 51.4, 34.6 53.4, 34.6 57.6" +
-    " L 34.6 84" +
-    " C 34.9 87.4, 36.6 88.2, 40 88.2" +
-    " C 43.4 88.2, 45 87.4, 45.2 84" +
-    " L 45.2 55.6" +
-    " C 45.2 51.4, 47.2 49.4, 50 49.4" +
-    " C 52.8 49.4, 54.8 51.4, 54.8 55.6" +
-    " L 54.8 84.4" +
-    " C 55.1 87.8, 56.8 88.6, 60 88.6" +
-    " C 63.2 88.6, 64.9 87.8, 65.4 84.4" +
-    " L 65.6 62.4" +
-    " C 65.6 58.4, 67.5 56.4, 70 56.4" +
-    " C 72.5 56.4, 74.4 58.4, 74.4 62.4" +
-    " L 74.4 85" +
-    " C 74.7 88.4, 76.6 89.2, 80 89.2" +
-    " C 83.4 89.2, 85.2 88.4, 86.2 85.4" +
-    " L 86.2 70" +
-    " C 86.2 66.4, 87.9 64.6, 90 64.6" +
-    " C 92.1 64.6, 93.8 66.4, 93.8 70" +
-    " L 93.8 86" +
-    " C 95.6 90, 97 94, 96.6 98" +
-    " C 96.3 101, 95.4 103, 94.4 105" +
-    " C 93.8 107.5, 93.2 110, 92.8 112" +
-    " L 25 112" +
-    " C 23.5 108.5, 19.5 106, 16 104 Z";
+    " C 17 84, 20.5 89.5, 24.8 92.5" +  // inner thumb to the crotch
+    " C 25.3 87, 25.8 68, 26 56.5" +    // index, left edge (tapering in)
+    " C 26 52.4, 27.6 50.4, 30 50.4" +  // rounded tip
+    " C 32.4 50.4, 34 52.4, 34 56.5" +
+    " C 34.2 68, 34.5 80, 34.8 84.5" +  // right edge (widening to the base)
+    " C 35.1 87.6, 36.6 88.4, 40 88.4" +// webbed valley
+    " C 43.4 88.4, 44.9 87.6, 45.2 84.5" +
+    " C 45.5 80, 45.8 68, 45.9 54.6" +  // middle (longest)
+    " C 45.9 50.4, 47.6 48.4, 50 48.4" +
+    " C 52.4 48.4, 54.1 50.4, 54.1 54.6" +
+    " C 54.2 68, 54.5 80, 54.8 84.9" +
+    " C 55.1 88, 56.8 88.8, 60 88.8" +
+    " C 63.2 88.8, 64.9 88, 65.3 84.9" +
+    " C 65.5 80, 65.8 70, 66 61.3" +    // ring
+    " C 66 57.4, 67.6 55.5, 70 55.5" +
+    " C 72.4 55.5, 74 57.4, 74 61.3" +
+    " C 74.2 70, 74.4 80, 74.6 85.4" +
+    " C 74.9 88.6, 76.6 89.4, 80 89.4" +
+    " C 83.4 89.4, 85 88.6, 86 85.6" +
+    " C 86.1 81, 86.3 74, 86.5 69.2" +  // pinky (smallest)
+    " C 86.5 65.8, 88 64, 90 64" +
+    " C 92 64, 93.5 65.8, 93.5 69.2" +
+    " C 93.6 74, 93.7 80, 93.8 86" +
+    " C 95.6 90, 97 94, 96.6 98" +      // outer palm, down to the wrist
+    " C 96.3 100, 95.4 101.5, 94.4 103" +
+    " C 94 104.4, 93.6 105.7, 93.2 107" +
+    " L 24.8 107" +
+    " C 23.2 105.5, 19.4 105, 16 104 Z";
+
+  // Knuckle + palm creases (stroke-only detail lines).
+  const CREASES =
+    "M 27 66 Q 30 67.6 33 66" +         // index mid-joint
+    " M 47 64 Q 50 65.6 53 64" +        // middle
+    " M 67 68.5 Q 70 70 73 68.5" +      // ring
+    " M 87.4 74 Q 90 75.4 92.6 74" +    // pinky
+    " M 8.5 81 Q 11.5 82.3 14 80.6" +   // thumb joint
+    " M 27 97 Q 46 102 66 98";          // palm line
+  // Sleeve cuff across the wrist (drawn on top, like the reference art).
+  const CUFF = "M 22.6 101.6 C 42 104.6, 76 104.6, 95.4 101.6 L 93.2 107 L 24.8 107 Z";
 
   // Fingertip badge tops matching the artwork's finger pads
   // (finger number → y as % of keyboard height; x comes from the key center).
   const TIP = { 1: 75, 2: 56, 3: 54, 4: 61, 5: 69 };
+  let uid = 0; // unique gradient id per rendered hand
 
   function whitesFrom(midi, count, dir) {
     const out = [];
@@ -158,16 +171,37 @@
         const left = Math.min(...placed.map((p) => p.r.leftPct));
         const right = Math.max(...placed.map((p) => p.r.leftPct + p.r.widthPct));
         const svg = document.createElementNS(SVGNS, "svg");
-        svg.setAttribute("viewBox", "0 0 100 112");
+        svg.setAttribute("viewBox", "0 0 100 107");
         svg.setAttribute("preserveAspectRatio", "none");
         svg.setAttribute("class", "hand-svg");
         svg.style.left = left + "%";
         svg.style.width = (right - left) + "%";
         if (handKey === "left") svg.style.transform = "scaleX(-1)";
-        const path = document.createElementNS(SVGNS, "path");
-        path.setAttribute("d", HAND_PATH);
-        path.setAttribute("vector-effect", "non-scaling-stroke");
-        svg.appendChild(path);
+        // Soft skin gradient (lighter at the fingers, warmer at the palm).
+        const gid = "hand-g" + (++uid);
+        const defs = document.createElementNS(SVGNS, "defs");
+        const grad = document.createElementNS(SVGNS, "linearGradient");
+        grad.setAttribute("id", gid);
+        grad.setAttribute("x1", "0"); grad.setAttribute("y1", "0");
+        grad.setAttribute("x2", "0"); grad.setAttribute("y2", "1");
+        [["0%", "rgba(242, 205, 170, 0.55)"], ["100%", "rgba(224, 168, 124, 0.55)"]].forEach(([off, col]) => {
+          const stop = document.createElementNS(SVGNS, "stop");
+          stop.setAttribute("offset", off); stop.setAttribute("stop-color", col);
+          grad.appendChild(stop);
+        });
+        defs.appendChild(grad);
+        svg.appendChild(defs);
+        const piece = (d, cls, fill) => {
+          const p = document.createElementNS(SVGNS, "path");
+          p.setAttribute("d", d);
+          p.setAttribute("class", cls);
+          if (fill) p.setAttribute("fill", fill);
+          p.setAttribute("vector-effect", "non-scaling-stroke");
+          svg.appendChild(p);
+        };
+        piece(HAND_PATH, "hand-shape", "url(#" + gid + ")");
+        piece(CREASES, "hand-crease");
+        piece(CUFF, "hand-cuff");
         this.overlay.appendChild(svg);
       }
 
