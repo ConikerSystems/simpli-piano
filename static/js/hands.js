@@ -56,7 +56,14 @@
   function handHeight(sp, H) { return Math.min(H * 1.12, sp * 3.2); }
 
   /* Build one right hand. cx = the 5 ascending fingertip x-centers in px
-     (thumb..pinky), H = keyboard height px. Returns { d, nails, cr, cf, hl }. */
+     (thumb..pinky), H = keyboard height px. Returns { d, nails, cr, cf, hl }.
+
+     Anatomy model: the four fingers FAN OUT from knuckles that sit closer
+     together than the fingertips (bases pulled ~22% toward the palm centre),
+     and each finger is gently BENT along its length (a lateral bow toward the
+     hand's centre, strongest away from the middle finger). The thumb is a
+     long, broad digit rooted down by the wrist, reaching diagonally to its
+     key, separated from the index by a deep notch. */
   function buildHand(cx, H) {
     const [c1, c2, c3, c4, c5] = cx;
     const sp = (c5 - c1) / 4 || H * 0.4;
@@ -74,117 +81,119 @@
 
     const n = (v) => (+v).toFixed(1);
     const P = (x, y) => n(x) + " " + n(y);
+    const Pt = (p) => P(p[0], p[1]);
     const C = (x1, y1, x2, y2, x, y) => " C " + P(x1, y1) + ", " + P(x2, y2) + ", " + P(x, y);
+    const Cp = (a, b, c) => " C " + Pt(a) + ", " + Pt(b) + ", " + Pt(c);
 
-    // Finger parameters: index, middle (longest), ring (a touch longer than
-    // index), pinky (clearly shorter and thinner than the rest).
+    /* One digit: base (bx,by) → tip pad (tx,ty), half-widths hwB/hwT, and a
+       lateral bend (px units, + = geometric right). Returns edge/cap path
+       segments, endpoints, a closed outline (for the glow), nail + creases. */
+    function digit(bx, by, tx, ty, hwB, hwT, bend) {
+      const dxv = tx - bx, dyv = ty - by, len = Math.hypot(dxv, dyv) || 1;
+      const ux = dxv / len, uy = dyv / len;
+      const px = -uy, py = ux;                    // always the geometric right here
+      const off = (x, y, s) => [x + px * s, y + py * s];
+      const along = (x, y, s) => [x + ux * s, y + uy * s];
+      const baseR = off(bx, by, hwB), baseL = off(bx, by, -hwB);
+      const tipR = off(tx, ty, hwT), tipL = off(tx, ty, -hwT);
+      const apex = along(tx, ty, hwT * 1.05);
+      const bX = px * bend, bY = py * bend;       // lateral bend vector
+      // left edge up (with the bend bowing the shaft), rounded cap, right edge down
+      const eL = Cp([baseL[0] + ux * len * 0.34 + bX, baseL[1] + uy * len * 0.34 + bY],
+                    [tipL[0] - ux * len * 0.26 + bX * 0.55, tipL[1] - uy * len * 0.26 + bY * 0.55], tipL);
+      const cap = Cp(along(tipL[0], tipL[1], hwT * 0.6), [apex[0] - px * hwT * 0.58, apex[1] - py * hwT * 0.58], apex)
+                + Cp([apex[0] + px * hwT * 0.58, apex[1] + py * hwT * 0.58], along(tipR[0], tipR[1], hwT * 0.6), tipR);
+      const eR = Cp([tipR[0] - ux * len * 0.26 + bX * 0.55, tipR[1] - uy * len * 0.26 + bY * 0.55],
+                    [baseR[0] + ux * len * 0.34 + bX, baseR[1] + uy * len * 0.34 + bY], baseR);
+      const closed = "M " + Pt(baseL) + eL + cap + eR + " Z";
+      const nc = along(tx, ty, hwT * 0.15);
+      const nail = { cx: nc[0], cy: nc[1], rx: hwT * 0.55, ry: hwT * 0.8,
+        rot: Math.atan2(uy, ux) * 180 / Math.PI + 90 };
+      let creases = "";
+      [0.46, 0.7].forEach((t) => {
+        const w = (hwB + (hwT - hwB) * t) * 0.62;
+        const mx = bx + dxv * t + px * bend * Math.sin(Math.PI * t);
+        const my = by + dyv * t + py * bend * Math.sin(Math.PI * t);
+        const a = off(mx, my, -w), b = off(mx, my, w);
+        creases += "M " + Pt(a) + " Q " + P(mx + ux * 1.8, my + uy * 1.8) + " " + Pt(b) + " ";
+      });
+      return { baseL, baseR, eL, cap, eR, closed, nail, creases };
+    }
+
+    // Knuckles fan toward the palm centre; tips stay on their key centres.
+    const pcx = (c2 + c5) / 2 - 0.04 * (c5 - c2);
     const FC = [c2, c3, c4, c5];
     const TIPY = [48, 43, 46.5, 63];
     const HWT = [5.2, 5.5, 5.0, 3.8].map((v) => v * u);
-    const HWB = HWT.map((v) => v * 1.15);
-    const VY = [84.4, 85.2, 86.6];                 // web valley bottoms (low knuckle line)
-    const VX = [(c2 + c3) / 2, (c3 + c4) / 2, (c4 + c5) / 2];
+    const HWB = HWT.map((v) => v * 1.28);
+    const baseY = ys(89), valleyY = ys(91.2);
+    const digits = [];
+    for (let i = 0; i < 4; i++) {
+      const fcx = FC[i];
+      const bx = fcx + (pcx - fcx) * 0.22;
+      const bend = Math.max(-1.3, Math.min(1.3, (pcx - fcx) / sp)) * 1.1 * u;
+      digits.push(digit(bx, baseY, fcx, ys(TIPY[i] + 4), HWB[i], HWT[i], bend));
+    }
+    // Thumb: rooted low by the wrist, long diagonal reach to its key.
+    const th = digit(X(24.5), ys(100), c1, ys(77), 6.0 * u, 4.7 * u, -1.3 * u);
+
     const wristL = X(21), wristR = c5 + 2.0 * u;
+    const notch = [c1 + (digits[0].baseL[0] - c1) * 0.55, ys(90.6)]; // thumb–index web
 
     // ---- Unified silhouette (clockwise from the left wrist corner) ----
     let d = "M " + P(wristL, ys(106));
-    // palm left edge rising to the thumb's root
-    d += C(X(19), ys(102), X(16.5), ys(99.5), X(15.5), ys(96));
-    // thumb — clearly BROADER than the fingers and set diagonally, with a
-    // bend at the base joint (nothing like the pinky)
-    d += C(X(12.5), ys(93.5), c1 - 7.0 * u, ys(88.5), c1 - 7.6 * u, ys(83.5));
-    d += C(c1 - 7.9 * u, ys(80.5), c1 - 7.3 * u, ys(76.8), c1 - 5.8 * u, ys(74.2));
-    // broad tilted thumb tip, apex leaning toward the hand's outside
-    d += C(c1 - 4.4 * u, ys(71.2), c1 - 0.8 * u, ys(70.0), c1 + 2.2 * u, ys(71.8));
-    // inner thumb edge back down, then the thumb–index web
-    d += C(c1 + 3.9 * u, ys(72.9), c1 + 4.5 * u, ys(75.2), c1 + 3.9 * u, ys(77.8));
-    d += C(c1 + 5.6 * u, ys(83.5), X(20.4), ys(88.5), c2 - HWB[0] - 0.2 * u, ys(90));
-    // index finger: knuckle bulge low, taper to a blunt tip, into web 1
-    d += C(c2 - HWB[0] - 1.1 * u, ys(80), c2 - HWB[0] + 0.2 * u, ys(66), c2 - HWT[0], ys(TIPY[0] + 5.2));
-    d += C(c2 - HWT[0], ys(TIPY[0] + 1.7), c2 - HWT[0] * 0.78, ys(TIPY[0] - 0.2), c2, ys(TIPY[0] - 0.2));
-    d += C(c2 + HWT[0] * 0.78, ys(TIPY[0] - 0.2), c2 + HWT[0], ys(TIPY[0] + 1.7), c2 + HWT[0], ys(TIPY[0] + 5.2));
-    d += C(c2 + HWT[0] + 0.2 * u, ys(66), c2 + HWB[0] + 1.0 * u, ys(78), c2 + HWB[0] + 0.4 * u, ys(81.4));
-    // web valley 1 — a smooth U spanning the whole gap (no flat deck)
-    let gL = VX[0] - (c2 + HWB[0]), gR = (c3 - HWB[1]) - VX[0];
-    d += C(c2 + HWB[0] + gL * 0.4, ys(VY[0] - 0.8), VX[0] - gL * 0.35, ys(VY[0]), VX[0], ys(VY[0]));
-    d += C(VX[0] + gR * 0.35, ys(VY[0]), c3 - HWB[1] - gR * 0.4, ys(VY[0] - 0.8), c3 - HWB[1] - 0.2 * u, ys(81.4));
-    // middle finger
-    d += C(c3 - HWB[1] - 0.7 * u, ys(70), c3 - HWB[1] + 0.3 * u, ys(58), c3 - HWT[1], ys(TIPY[1] + 5.4));
-    d += C(c3 - HWT[1], ys(TIPY[1] + 1.7), c3 - HWT[1] * 0.78, ys(TIPY[1] - 0.2), c3, ys(TIPY[1] - 0.2));
-    d += C(c3 + HWT[1] * 0.78, ys(TIPY[1] - 0.2), c3 + HWT[1], ys(TIPY[1] + 1.7), c3 + HWT[1], ys(TIPY[1] + 5.4));
-    d += C(c3 + HWT[1] + 0.2 * u, ys(64), c3 + HWB[1] + 1.0 * u, ys(79), c3 + HWB[1] + 0.4 * u, ys(82.2));
-    // web valley 2
-    gL = VX[1] - (c3 + HWB[1]); gR = (c4 - HWB[2]) - VX[1];
-    d += C(c3 + HWB[1] + gL * 0.4, ys(VY[1] - 0.8), VX[1] - gL * 0.35, ys(VY[1]), VX[1], ys(VY[1]));
-    d += C(VX[1] + gR * 0.35, ys(VY[1]), c4 - HWB[2] - gR * 0.4, ys(VY[1] - 0.8), c4 - HWB[2] - 0.2 * u, ys(82.2));
-    // ring finger
-    d += C(c4 - HWB[2] - 0.7 * u, ys(76), c4 - HWB[2] + 0.3 * u, ys(62), c4 - HWT[2], ys(TIPY[2] + 5));
-    d += C(c4 - HWT[2], ys(TIPY[2] + 1.4), c4 - HWT[2] * 0.78, ys(TIPY[2] - 0.5), c4, ys(TIPY[2] - 0.5));
-    d += C(c4 + HWT[2] * 0.78, ys(TIPY[2] - 0.5), c4 + HWT[2], ys(TIPY[2] + 1.4), c4 + HWT[2], ys(TIPY[2] + 5));
-    d += C(c4 + HWT[2] + 0.2 * u, ys(68), c4 + HWB[2] + 0.9 * u, ys(81.5), c4 + HWB[2] + 0.4 * u, ys(83.8));
-    // web valley 3
-    gL = VX[2] - (c4 + HWB[2]); gR = (c5 - HWB[3]) - VX[2];
-    d += C(c4 + HWB[2] + gL * 0.4, ys(VY[2] - 0.8), VX[2] - gL * 0.35, ys(VY[2]), VX[2], ys(VY[2]));
-    d += C(VX[2] + gR * 0.35, ys(VY[2]), c5 - HWB[3] - gR * 0.4, ys(VY[2] - 0.8), c5 - HWB[3] - 0.2 * u, ys(83.8));
-    // pinky — short and low
-    d += C(c5 - HWB[3] - 0.6 * u, ys(80), c5 - HWB[3] + 0.3 * u, ys(71), c5 - HWT[3], ys(TIPY[3] + 4.4));
-    d += C(c5 - HWT[3], ys(TIPY[3] + 1.3), c5 - HWT[3] * 0.75, ys(TIPY[3] - 0.4), c5, ys(TIPY[3] - 0.4));
-    d += C(c5 + HWT[3] * 0.75, ys(TIPY[3] - 0.4), c5 + HWT[3], ys(TIPY[3] + 1.3), c5 + HWT[3], ys(TIPY[3] + 4.4));
-    // pinky outer edge flows continuously into the palm's right side + wrist
-    d += C(c5 + 5.2 * u, ys(72.5), c5 + 6.2 * u, ys(80), c5 + 6.8 * u, ys(85));
-    d += C(c5 + 7.6 * u, ys(89), c5 + 7.4 * u, ys(95), c5 + 6.0 * u, ys(99.5));
-    d += C(c5 + 5.0 * u, ys(102.5), c5 + 3.8 * u, ys(104.5), wristR, ys(106));
-    // forearm runs off the bottom edge (the sleeve cuff covers the join)
+    // up to the thumb's outer base (the thumb root sits at the wrist)
+    d += Cp([X(20), ys(104)], [th.baseL[0] - 1.2 * u, th.baseL[1] + 3 * u], th.baseL);
+    d += th.eL + th.cap;                          // outer edge + broad tilted tip
+    // inner thumb edge down into the DEEP thumb–index notch, then up to the index knuckle
+    {
+      const tR = th.baseR; // where the inner edge would land
+      d += Cp([notch[0] - (notch[0] - c1) * 0.7, ys(80)], [notch[0] - 2.5 * u, notch[1] - 4 * u], notch);
+      d += Cp([notch[0] + (digits[0].baseL[0] - notch[0]) * 0.45, notch[1]],
+              [digits[0].baseL[0] - 1.5 * u, digits[0].baseL[1] + 1.5 * u], digits[0].baseL);
+      void tR;
+    }
+    // four fingers, webbed together
+    for (let i = 0; i < 4; i++) {
+      d += digits[i].eL + digits[i].cap + digits[i].eR;
+      if (i < 3) {
+        const a = digits[i].baseR, b = digits[i + 1].baseL;
+        const vx = (a[0] + b[0]) / 2;
+        d += C(a[0] + (vx - a[0]) * 0.5, a[1] + (valleyY - a[1]) * 1.3, vx - (vx - a[0]) * 0.35, valleyY, vx, valleyY);
+        d += C(vx + (b[0] - vx) * 0.35, valleyY, b[0] - (b[0] - vx) * 0.5, b[1] + (valleyY - b[1]) * 1.3, b[0], b[1]);
+      }
+    }
+    // pinky-side palm edge down to the wrist, then the forearm off the bottom
+    d += Cp([c5 + 3.6 * u, ys(92)], [c5 + 5.2 * u, ys(95.5)], [c5 + 4.8 * u, ys(100)]);
+    d += Cp([c5 + 4.4 * u, ys(103)], [c5 + 3.2 * u, ys(105)], [wristR, ys(106)]);
     d += C(wristR - 0.4 * u, ys(112), wristR - 1.2 * u, ys(118), wristR - 1.6 * u, ys(126));
     d += " L " + P(wristL + 1.6 * u, ys(126));
     d += C(wristL + 1.2 * u, ys(118), wristL + 0.4 * u, ys(112), wristL, ys(106));
     d += " Z";
 
-    // ---- Fingernails (thumb's is rotated with the thumb's tilt) ----
-    const nails = [];
-    for (let i = 0; i < 4; i++) {
-      nails.push({ cx: FC[i], cy: ys(TIPY[i] + 3.4), rx: HWT[i] * 0.55, ry: HWT[i] * 0.75, rot: 0 });
-    }
-    nails.push({ cx: c1 - 1.6 * u, cy: ys(73.6), rx: 3.3 * u, ry: 4.3 * u, rot: -50 });
+    // ---- Nails ----
+    const nails = digits.map((f) => f.nail);
+    nails.push(th.nail);
 
-    // ---- Creases: knuckles ×2 per finger, thumb bend, palm, metacarpals ----
-    let cr = "";
-    const arc = (x, y, hw, sag) =>
-      "M " + P(x - hw, ys(y)) + " Q " + P(x, ys(y + sag)) + " " + P(x + hw, ys(y)) + " ";
-    for (let i = 0; i < 4; i++) {
-      cr += arc(FC[i], TIPY[i] + 16, HWT[i] * 0.62, 1.8);
-      cr += arc(FC[i], TIPY[i] + 7.5, HWT[i] * 0.5, 1.4);
+    // ---- Creases: finger joints (from the digits), thumb joint, palm ----
+    let cr = digits.map((f) => f.creases).join("") + th.creases;
+    cr += "M " + P(X(28), ys(96.5)) + " Q " + P(X(46), ys(101.5)) + " " + P(X(70), ys(97.5)) + " ";
+    // metacarpal hints running from each web valley toward the wrist
+    for (let i = 0; i < 3; i++) {
+      const vx = (digits[i].baseR[0] + digits[i + 1].baseL[0]) / 2;
+      cr += "M " + P(vx, valleyY + 1.5) + " Q " + P(vx + (pcx - vx) * 0.1, valleyY + He * 0.045)
+        + " " + P(vx + (pcx - vx) * 0.22, valleyY + He * 0.075) + " ";
     }
-    cr += "M " + P(c1 - 0.6 * u, ys(80.6)) + " Q " + P(c1 + 1.6 * u, ys(82.4)) + " " + P(c1 + 3.6 * u, ys(81.2)) + " ";
-    cr += "M " + P(X(26), ys(96)) + " Q " + P(X(45), ys(101.5)) + " " + P(X(72), ys(97.5)) + " ";
-    VX.forEach((vx, i) => {
-      cr += "M " + P(vx, ys(VY[i] + 1.2)) + " Q " + P(vx - 0.5 * u, ys(VY[i] + 4.5)) + " " + P(vx - 1.0 * u, ys(VY[i] + 7)) + " ";
-    });
 
-    // ---- Sleeve cuff — a band over the forearm, arched top edge (like the
-    // reference art's sleeves), running off the bottom with the arm ----
+    // ---- Sleeve cuff — arched band over the forearm, off the bottom ----
     const cf = "M " + P(wristL - 1.4 * u, ys(112))
       + " Q " + P((wristL + wristR) / 2, ys(106.5)) + " " + P(wristR + 1.4 * u, ys(112))
       + " L " + P(wristR + 0.6 * u, ys(128))
       + " L " + P(wristL - 0.6 * u, ys(128)) + " Z";
 
-    // ---- Whole-finger glow regions (finger number → closed path) ----
-    const hl = {};
-    for (let i = 0; i < 4; i++) {
-      const x = FC[i], ht = HWT[i], hb = HWB[i], tip = TIPY[i];
-      hl[i + 2] = "M " + P(x - hb, ys(90.5))
-        + C(x - hb, ys(72), x - hb + 0.2 * u, ys(60), x - ht, ys(tip + 5))
-        + C(x - ht, ys(tip + 1.6), x - ht * 0.78, ys(tip - 0.2), x, ys(tip - 0.2))
-        + C(x + ht * 0.78, ys(tip - 0.2), x + ht, ys(tip + 1.6), x + ht, ys(tip + 5))
-        + C(x + ht, ys(60), x + hb, ys(72), x + hb, ys(90.5))
-        + C(x + hb * 0.6, ys(93.5), x - hb * 0.6, ys(93.5), x - hb, ys(90.5)) + " Z";
-    }
-    hl[1] = "M " + P(c1 - 7.4 * u, ys(83))
-      + C(c1 - 7.7 * u, ys(78), c1 - 5.6 * u, ys(72.6), c1 - 4.2 * u, ys(71.2))
-      + C(c1 - 1.8 * u, ys(69.4), c1 + 0.8 * u, ys(69.8), c1 + 2.2 * u, ys(71.8))
-      + C(c1 + 4.0 * u, ys(74.2), c1 + 4.5 * u, ys(77.6), c1 + 3.4 * u, ys(80.6))
-      + C(c1 + 2.2 * u, ys(84), c1 - 3.5 * u, ys(86), c1 - 5.8 * u, ys(85))
-      + C(c1 - 7.0 * u, ys(84.4), c1 - 7.3 * u, ys(83.6), c1 - 7.4 * u, ys(83)) + " Z";
+    // ---- Whole-finger glow regions (finger number → closed outline) ----
+    const hl = { 1: th.closed };
+    digits.forEach((f, i) => { hl[i + 2] = f.closed; });
 
     return { d, nails, cr, cf, hl, He, st };
   }
