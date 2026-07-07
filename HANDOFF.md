@@ -2,7 +2,21 @@
 
 _Updated: 2026-07-07_
 
-## Latest — v1.8.12 (sw cache v45): hands ALWAYS start off + per-finger anatomy
+## Latest — v1.8.13 (sw cache v46): hand rebuilt as a REAL anatomical hand
+Joe (repeatedly): the old art was "a wood log with 4 pegs" / thumb & pinky swapped-looking.
+`buildHand()` in [hands.js](static/js/hands.js) fully rewritten around a `digit()` helper:
+each of the four fingers is a rounded tapered digit whose KNUCKLE is pulled ~22% toward
+the palm centre (so fingers FAN OUT to the tips) and whose shaft has a lateral BEND (bows
+toward hand centre, near-zero on the middle finger). The thumb is one long broad diagonal
+digit rooted low at the wrist reaching to c1, split from the index by a deep notch. Nails
+rotate with each digit; two joint creases per finger come from the digit builder. Verified
+in preview (right hand on Twinkle, left hand mirrored in Free Play, tablet + mobile): reads
+as a human hand, thumb (broad, left/C for RH) and pinky (short, slim, right) now clearly
+distinct, glow-follow + badges correct, zero console errors. Still default-OFF, labeled
+🖐 Hands. Next idea Joe floated but NOT done: taller course-page keys for more hand room,
+and a translucent hand directly over the target key.
+
+## Prev — v1.8.12 (sw cache v45): hands ALWAYS start off + per-finger anatomy
 Joe: (a) hands must start OFF every time — the old localStorage persistence made it feel
 default-on once toggled. `fingersChip` is now per-view state only, no localStorage
 (`piano.showHands` abandoned); every page opens with hands hidden. (b) "thumb and pinky
