@@ -31,7 +31,7 @@
   const { isWhite } = window.Theory;
 
   // Badge tops (fraction of hand height) — sit on each finger's pad.
-  const TIP = { 1: 0.70, 2: 0.48, 3: 0.43, 4: 0.48, 5: 0.58 };
+  const TIP = { 1: 0.70, 2: 0.48, 3: 0.43, 4: 0.465, 5: 0.61 };
 
   // Semi-transparent skin palette (keys read through the hand).
   const A = 0.78;
@@ -76,10 +76,11 @@
     const P = (x, y) => n(x) + " " + n(y);
     const C = (x1, y1, x2, y2, x, y) => " C " + P(x1, y1) + ", " + P(x2, y2) + ", " + P(x, y);
 
-    // Finger parameters: index, middle (longest), ring, pinky (short + low).
+    // Finger parameters: index, middle (longest), ring (a touch longer than
+    // index), pinky (clearly shorter and thinner than the rest).
     const FC = [c2, c3, c4, c5];
-    const TIPY = [48, 43, 48.5, 59.5];
-    const HWT = [5.2, 5.4, 5.0, 4.4].map((v) => v * u);
+    const TIPY = [48, 43, 46.5, 63];
+    const HWT = [5.2, 5.5, 5.0, 3.8].map((v) => v * u);
     const HWB = HWT.map((v) => v * 1.15);
     const VY = [84.4, 85.2, 86.6];                 // web valley bottoms (low knuckle line)
     const VX = [(c2 + c3) / 2, (c3 + c4) / 2, (c4 + c5) / 2];
@@ -88,15 +89,16 @@
     // ---- Unified silhouette (clockwise from the left wrist corner) ----
     let d = "M " + P(wristL, ys(106));
     // palm left edge rising to the thumb's root
-    d += C(X(19), ys(102), X(16.5), ys(99), X(15), ys(95.5));
-    // thumb outer edge — S-curve with a visible bend at the base joint
-    d += C(X(12), ys(92), c1 - 4.5 * u, ys(86.5), c1 - 5.5 * u, ys(81.5));
-    d += C(c1 - 5.9 * u, ys(79), c1 - 5.9 * u, ys(76.5), c1 - 4.6 * u, ys(74.4));
-    // rounded, tilted thumb tip (pad centred on its key)
-    d += C(c1 - 3.4 * u, ys(71.6), c1 + 0.4 * u, ys(70.6), c1 + 3.0 * u, ys(72.4));
+    d += C(X(19), ys(102), X(16.5), ys(99.5), X(15.5), ys(96));
+    // thumb — clearly BROADER than the fingers and set diagonally, with a
+    // bend at the base joint (nothing like the pinky)
+    d += C(X(12.5), ys(93.5), c1 - 7.0 * u, ys(88.5), c1 - 7.6 * u, ys(83.5));
+    d += C(c1 - 7.9 * u, ys(80.5), c1 - 7.3 * u, ys(76.8), c1 - 5.8 * u, ys(74.2));
+    // broad tilted thumb tip, apex leaning toward the hand's outside
+    d += C(c1 - 4.4 * u, ys(71.2), c1 - 0.8 * u, ys(70.0), c1 + 2.2 * u, ys(71.8));
     // inner thumb edge back down, then the thumb–index web
-    d += C(c1 + 4.8 * u, ys(73.8), c1 + 5.3 * u, ys(76.4), c1 + 4.7 * u, ys(79));
-    d += C(c1 + 6.4 * u, ys(85.5), X(20.4), ys(88.5), c2 - HWB[0] - 0.2 * u, ys(90));
+    d += C(c1 + 3.9 * u, ys(72.9), c1 + 4.5 * u, ys(75.2), c1 + 3.9 * u, ys(77.8));
+    d += C(c1 + 5.6 * u, ys(83.5), X(20.4), ys(88.5), c2 - HWB[0] - 0.2 * u, ys(90));
     // index finger: knuckle bulge low, taper to a blunt tip, into web 1
     d += C(c2 - HWB[0] - 1.1 * u, ys(80), c2 - HWB[0] + 0.2 * u, ys(66), c2 - HWT[0], ys(TIPY[0] + 5.2));
     d += C(c2 - HWT[0], ys(TIPY[0] + 1.7), c2 - HWT[0] * 0.78, ys(TIPY[0] - 0.2), c2, ys(TIPY[0] - 0.2));
@@ -143,7 +145,7 @@
     for (let i = 0; i < 4; i++) {
       nails.push({ cx: FC[i], cy: ys(TIPY[i] + 3.4), rx: HWT[i] * 0.55, ry: HWT[i] * 0.75, rot: 0 });
     }
-    nails.push({ cx: c1 - 0.2 * u, cy: ys(74.8), rx: 2.9 * u, ry: 3.9 * u, rot: -42 });
+    nails.push({ cx: c1 - 1.6 * u, cy: ys(73.6), rx: 3.3 * u, ry: 4.3 * u, rot: -50 });
 
     // ---- Creases: knuckles ×2 per finger, thumb bend, palm, metacarpals ----
     let cr = "";
@@ -153,7 +155,7 @@
       cr += arc(FC[i], TIPY[i] + 16, HWT[i] * 0.62, 1.8);
       cr += arc(FC[i], TIPY[i] + 7.5, HWT[i] * 0.5, 1.4);
     }
-    cr += "M " + P(c1 + 0.5 * u, ys(80.2)) + " Q " + P(c1 + 2.4 * u, ys(82)) + " " + P(c1 + 4.4 * u, ys(81)) + " ";
+    cr += "M " + P(c1 - 0.6 * u, ys(80.6)) + " Q " + P(c1 + 1.6 * u, ys(82.4)) + " " + P(c1 + 3.6 * u, ys(81.2)) + " ";
     cr += "M " + P(X(26), ys(96)) + " Q " + P(X(45), ys(101.5)) + " " + P(X(72), ys(97.5)) + " ";
     VX.forEach((vx, i) => {
       cr += "M " + P(vx, ys(VY[i] + 1.2)) + " Q " + P(vx - 0.5 * u, ys(VY[i] + 4.5)) + " " + P(vx - 1.0 * u, ys(VY[i] + 7)) + " ";
@@ -177,12 +179,12 @@
         + C(x + ht, ys(60), x + hb, ys(72), x + hb, ys(90.5))
         + C(x + hb * 0.6, ys(93.5), x - hb * 0.6, ys(93.5), x - hb, ys(90.5)) + " Z";
     }
-    hl[1] = "M " + P(c1 - 5.5 * u, ys(81.5))
-      + C(c1 - 5.9 * u, ys(76.5), c1 - 4.6 * u, ys(72.4), c1 - 3.4 * u, ys(71.2))
-      + C(c1 - 1.4 * u, ys(69.8), c1 + 1.4 * u, ys(70), c1 + 3.0 * u, ys(72.4))
-      + C(c1 + 4.8 * u, ys(74.6), c1 + 5.3 * u, ys(78), c1 + 4.2 * u, ys(81))
-      + C(c1 + 3.0 * u, ys(84.2), c1 - 2.5 * u, ys(85.4), c1 - 4.4 * u, ys(84))
-      + C(c1 - 5.3 * u, ys(83.2), c1 - 5.4 * u, ys(82.4), c1 - 5.5 * u, ys(81.5)) + " Z";
+    hl[1] = "M " + P(c1 - 7.4 * u, ys(83))
+      + C(c1 - 7.7 * u, ys(78), c1 - 5.6 * u, ys(72.6), c1 - 4.2 * u, ys(71.2))
+      + C(c1 - 1.8 * u, ys(69.4), c1 + 0.8 * u, ys(69.8), c1 + 2.2 * u, ys(71.8))
+      + C(c1 + 4.0 * u, ys(74.2), c1 + 4.5 * u, ys(77.6), c1 + 3.4 * u, ys(80.6))
+      + C(c1 + 2.2 * u, ys(84), c1 - 3.5 * u, ys(86), c1 - 5.8 * u, ys(85))
+      + C(c1 - 7.0 * u, ys(84.4), c1 - 7.3 * u, ys(83.6), c1 - 7.4 * u, ys(83)) + " Z";
 
     return { d, nails, cr, cf, hl, He, st };
   }

@@ -73,14 +73,14 @@
     return prev;
   }
 
-  // ---- "Which finger?" hands overlay — device-wide display preference ----
-  // Default OFF everywhere; the learner turns it on with the 🖐 Fingers chip.
-  const HANDS_KEY = "piano.showHands";
-  const handsOn = () => localStorage.getItem(HANDS_KEY) === "1";
+  // ---- "Which finger?" hands overlay ------------------------------------
+  // ALWAYS starts OFF when a page opens (no persistence — Joe's call); the
+  // learner taps 🖐 Hands to show it for the current screen.
+  const handsOn = () => false;
   function fingersChip(getHands) {
-    const b = el("button", { class: "chip" + (handsOn() ? " active" : ""), onclick: () => {
-      const on = !handsOn();
-      localStorage.setItem(HANDS_KEY, on ? "1" : "0");
+    let on = false;
+    const b = el("button", { class: "chip", onclick: () => {
+      on = !on;
       const h = getHands();
       if (h) h.setOn(on);
       b.classList.toggle("active", on);

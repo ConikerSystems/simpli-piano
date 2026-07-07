@@ -2,7 +2,16 @@
 
 _Updated: 2026-07-07_
 
-## Latest — v1.8.11 (sw cache v44): whole-hand look + taller keys
+## Latest — v1.8.12 (sw cache v45): hands ALWAYS start off + per-finger anatomy
+Joe: (a) hands must start OFF every time — the old localStorage persistence made it feel
+default-on once toggled. `fingersChip` is now per-view state only, no localStorage
+(`piano.showHands` abandoned); every page opens with hands hidden. (b) "thumb and pinky
+look the same": thumb is now much broader (±7.9u) and set diagonally with a bigger
+rotated nail (-50°) and matching wider glow blob; pinky thinner (3.8u) and shorter
+(tip y 63); ring now slightly longer than index (46.5 vs 48). Badge pads retuned.
+Verified: default-off on open + after re-enter, toggle works, glow follows, tablet look.
+
+## Previous — v1.8.11 (sw cache v44): whole-hand look + taller keys
 Per Joe (with the typing.com reference pic): toggle renamed **🖐 Hands** (his final call —
 was Fingers). Artwork moved closer to the reference: knuckle bulges low on each finger,
 blunter curled-looking tips (rounder tip curves), forearm now runs off the bottom edge with
