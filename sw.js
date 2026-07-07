@@ -1,7 +1,7 @@
 /* Simpli Piano service worker — NETWORK-FIRST so updates show when online,
    with a cached copy as the offline fallback. The app is fully self-contained
    (Web Audio synth, no external assets), so it works completely offline. */
-const VERSION = "simpli-piano-v33"; // bump to invalidate old caches on deploy
+const VERSION = "simpli-piano-v34"; // bump to invalidate old caches on deploy
 const SHELL = [
   "./",
   "index.html",
@@ -14,6 +14,7 @@ const SHELL = [
   "static/js/feedback.js",
   "static/js/audio.js",
   "static/js/keyboard.js",
+  "static/js/hands.js",
   "static/js/library.js",
   "static/js/songs.js",
   "static/js/engine.js",

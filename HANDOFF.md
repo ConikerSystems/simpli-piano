@@ -1,11 +1,24 @@
 # Simpli Piano — Session Handoff
 
-_Updated: 2026-07-05_
+_Updated: 2026-07-06_
 
 ## Where things stand
-**v1.8.0 (sw cache v33)** — big "emulate Simply Piano" release, built and verified in the
-desktop preview, pushed to GitHub Pages. Five new capabilities on top of the existing
-engine/course/trainer/mic/profiles:
+**v1.8.1 (sw cache v34)** — added the **🖐 Fingers hands overlay** (typing-tutor style, Joe's
+request from a typing.com screenshot): `static/js/hands.js` draws two semi-transparent
+cartoon hands over the on-screen keyboard, fingertips numbered the piano way (thumb 1 …
+pinky 5), anchored to the current five-finger position. The target key's fingertip lights
+up with the key (hands.js patches the keyboard instance's highlight/flash/clear/render).
+Toggle chip "🖐 Fingers" in Lessons, Read Notes, and Free Play; preference persists
+(`piano.showHands`, device-wide, default ON). Mapping: songs anchor on the C of the octave
+with the most notes (`fingerMapForSong` in app.js; "both" splits at middle C → two hands),
+bass-clef drills anchor LH pinky on C3, Free Play follows the hand selector + octave shift
+(left hand got 2 more keys of room below its thumb so the pinky is on-screen). Verified in
+preview: lesson highlight-follow, two-hand d4 songs, bass tests, free-play left hand, toggle
+persistence. NOT yet checked on the iPad (footer should show v1.8.1).
+
+Previous release **v1.8.0 (sw cache v33)** — big "emulate Simply Piano" release, built and
+verified in the desktop preview, pushed to GitHub Pages. Five new capabilities on top of the
+existing engine/course/trainer/mic/profiles:
 
 1. **Song library 12 → 42 real songs** — data moved to `static/js/library.js`
    (`window.SongData`, data-only; songs.js just parses it). New `genre` field

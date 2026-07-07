@@ -73,6 +73,37 @@
     return prev;
   }
 
+  // ---- "Which finger?" hands overlay — device-wide display preference ----
+  const HANDS_KEY = "piano.showHands";
+  const handsOn = () => localStorage.getItem(HANDS_KEY) !== "0";
+  function fingersChip(getHands) {
+    const b = el("button", { class: "chip" + (handsOn() ? " active" : ""), onclick: () => {
+      const on = !handsOn();
+      localStorage.setItem(HANDS_KEY, on ? "1" : "0");
+      const h = getHands();
+      if (h) h.setOn(on);
+      b.classList.toggle("active", on);
+    } }, "🖐 Fingers");
+    return b;
+  }
+  // Five-finger mapping for a song: anchor each hand on the C of the octave
+  // where most of its notes live (for "both", notes below middle C = left hand).
+  function fingerMapForSong(song) {
+    const counts = { low: {}, high: {} };
+    song.notes.forEach((n) => {
+      if (n.rest) return;
+      (Array.isArray(n.midi) ? n.midi : [n.midi]).forEach((m) => {
+        const c = Math.floor(m / 12) * 12; // the C at/below this note
+        const side = song.hand === "both" && m < 60 ? "low" : "high";
+        counts[side][c] = (counts[side][c] || 0) + 1;
+      });
+    });
+    const modeC = (o, dflt) => { let best = dflt, n = 0; for (const [c, k] of Object.entries(o)) if (k > n) { n = k; best = +c; } return best; };
+    if (song.hand === "left") return { left: { pinky: modeC(counts.high, 48) } };
+    if (song.hand === "both") return { left: { pinky: modeC(counts.low, 48) }, right: modeC(counts.high, 60) };
+    return { right: modeC(counts.high, 60) };
+  }
+
   // Coarse device detection so the keyboard sizes sensibly per device.
   // (iPadOS 13+ reports as "MacIntel" with touch points, so check that too.)
   function deviceProfile() {
@@ -452,9 +483,10 @@
     const startBtn = el("button", { class: "chip play", onclick: () => begin() }, "▶ Start");
     const listenBtn = el("button", { class: "chip", onclick: () => engine.listen() }, "🔊 Listen");
 
+    let hands = null;
     const controls = el("div", { class: "lesson-controls" }, [
       modeBtn, el("label", { class: "tempo" }, [el("span", {}, "Tempo"), tempo, tempoVal]),
-      listenBtn, startBtn,
+      fingersChip(() => hands), listenBtn, startBtn,
     ]);
     view.append(el("div", { class: "lesson" }, [controls, progress, status, lane, kbWrap]));
 
@@ -463,6 +495,9 @@
     const octaves = Math.max(1, Math.ceil((r.hi - startC) / 12));
     const kb = new window.Keyboard(kbEl, { startMidi: startC, octaves, showLabels: true });
     window._kb = kb;
+    hands = new window.Hands(kb, kbWrap);
+    hands.set(fingerMapForSong(song));
+    hands.setOn(handsOn());
 
     const engine = new window.LessonEngine({
       laneEl: lane, keyboard: kb,
@@ -746,6 +781,9 @@
 
     const kb = new window.Keyboard(kbEl, { startMidi: opts.kbStart || 60, octaves: opts.kbOctaves || 2, showLabels: true });
     window._kb = kb;
+    const hands = new window.Hands(kb, kbWrap);
+    hands.set(opts.clef === "bass" ? { left: { pinky: opts.kbStart || 48 } } : { right: opts.kbStart || 60 });
+    hands.setOn(handsOn());
 
     const trainer = new window.Trainer({
       svgEl: svg, keyboard: kb,
@@ -778,7 +816,7 @@
     const showKeyBtn = el("button", { class: "chip" + (opts.showKey !== false ? " active" : ""),
       onclick: () => { const on = !showKeyBtn.classList.contains("active"); showKeyBtn.classList.toggle("active", on); trainer.setShowKey(on); } }, "Show key");
     const controls = el("div", { class: "lesson-controls" }, [
-      showKeyBtn,
+      showKeyBtn, fingersChip(() => hands),
       el("button", { class: "chip", onclick: () => trainer.next() }, "Skip ›"),
     ]);
     view.append(el("div", { class: "lesson" }, [controls, stats, staff, kbWrap]));
@@ -838,7 +876,7 @@
     const dev = deviceProfile();
     let hand = "right";    // left | both | right
     let shift = 0;         // octave offset from the hand's home position
-    let kb;
+    let kb, hands;
 
     const kbEl = el("div", {});
     const kbWrap = el("div", { class: "kb-wrap grow" }, kbEl);
@@ -860,12 +898,14 @@
     const hint = el("div", { class: "lesson-status" });
 
     view.append(el("div", { class: "lesson" }, [
-      el("div", { class: "lesson-controls" }, [seg, down, octLabel, up, labels]),
+      el("div", { class: "lesson-controls" }, [seg, down, octLabel, up, labels, fingersChip(() => hands)]),
       hint, kbWrap,
     ]));
 
     kb = new window.Keyboard(kbEl, { startMidi: 60 });
     window._kb = kb;
+    hands = new window.Hands(kb, kbWrap);
+    hands.setOn(handsOn());
     // With the mic on, light up the key for whatever note it hears (if in view).
     window._micTarget = (m) => { if (kb.keyEls.get(m)) kb.flash(m, "good"); };
 
@@ -879,9 +919,12 @@
       const whiteCount = Math.max(5, Math.min(22, Math.round(w / targetKeyPx())));
       const home = anchorC(hand) + shift * 12;
       // Place the home C 3 white keys in (leftmost = the G a fourth below) so the
-      // thumb sits a bit toward the middle with lower keys to its left.
-      const start = Math.max(21, Math.min(96, home - 5));
+      // thumb sits a bit toward the middle with lower keys to its left. The left
+      // hand's fingers reach a 5th BELOW the thumb, so give it one more step.
+      const start = Math.max(21, Math.min(96, home - (hand === "left" ? 7 : 5)));
       kb.setWhiteRange(start, whiteCount);
+      // Thumb anchors on the home C for either hand (matches the hint text).
+      hands.set(hand === "left" ? { left: { thumb: home } } : { right: home });
       octLabel.textContent = window.Theory.midiToName(home);
       let msg = "Real-size keys — thumb on " + window.Theory.midiToName(home)
         + " for your " + hand + " hand. Use ▼ / ▲ to slide along the keyboard.";
