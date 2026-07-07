@@ -3,7 +3,7 @@
 _Updated: 2026-07-06_
 
 ## Where things stand
-**v1.8.4 (sw cache v37)** — added the **🖐 Fingers hands overlay** (typing-tutor style, Joe's
+**v1.8.5 (sw cache v38)** — added the **🖐 Hands overlay** (typing-tutor style, Joe's
 request from a typing.com screenshot): `static/js/hands.js` draws two semi-transparent
 cartoon hands over the on-screen keyboard — a single natural SVG hand silhouette per hand
 (curved fingers of different lengths, opposed thumb, palm + wrist; authored for the right
@@ -21,6 +21,13 @@ not a stretched viewBox) so finger proportions stay natural at any keyboard size
 keyboards the fingers splay apart and lengthen (`stretchFor(sp,H)`, badges raised by the
 same factor) instead of distorting into pancakes; a ResizeObserver re-draws on size change.
 Verified at 1194-wide landscape, 834 portrait, and narrow widths.
+v1.8.5 (Joe: "toggle not visible / finger highlight too subtle"): toggle chip renamed
+**🖐 Hands** (top controls in Lesson, Read Notes drills, Free Play); the WHOLE target
+finger now fills bright blue w/ white outline + pulse (per-finger `hl` capsule paths from
+buildHand, `.hand-fhl` — keyPulse animates box-shadow which is a no-op on SVG, so it gets
+its own `fingerPulse` opacity animation). Gotcha fixed: the ResizeObserver's initial fire
+re-rendered the overlay AFTER the lesson lit the first key, wiping the finger state —
+render() now re-syncs from the keyboard's `.hl-hint`/`.hl-good` key classes.
 Toggle chip "🖐 Fingers" in Lessons, Read Notes, and Free Play; preference persists
 (`piano.showHands`, device-wide, default ON). Mapping: songs anchor on the C of the octave
 with the most notes (`fingerMapForSong` in app.js; "both" splits at middle C → two hands),

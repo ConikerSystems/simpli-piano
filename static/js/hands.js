@@ -120,7 +120,29 @@
       + " L " + n(wristR - e * 0.2) + " " + n(yB)
       + " L " + n(wristL + sp * 0.06) + " " + n(yB) + " Z";
 
-    return { d, cr, cf };
+    // Per-finger highlight regions (finger number 1..5 → closed capsule that
+    // lights up when that finger's key is the target).
+    const hl = {};
+    {
+      // thumb: a tilted blob over the thumb artwork
+      const cy = H * T(0.745);
+      hl[1] = "M " + n(c1 - r1 * 1.35) + " " + n(cy + r1 * 0.3)
+        + C(c1 - r1 * 1.45, cy - r1 * 0.75, c1 - r1 * 0.5, cy - r1 * 1.25, c1 + r1 * 0.35, cy - r1 * 0.85)
+        + C(c1 + r1 * 1.15, cy - r1 * 0.45, c1 + r1 * 1.35, cy + r1 * 0.55, c1 + r1 * 0.75, cy + r1 * 1.05)
+        + C(c1 + r1 * 0.1, cy + r1 * 1.5, c1 - r1 * 1.1, cy + r1 * 1.15, c1 - r1 * 1.35, cy + r1 * 0.3) + " Z";
+    }
+    for (let i = 0; i < 4; i++) {
+      const x = FING[i], hb = hwB[i], ht = hwT[i], top = TOPS[i];
+      const tipBase = top + ht, base = H * 0.915;
+      hl[i + 2] = "M " + n(x - hb) + " " + n(base)
+        + C(x - hb, H * T(0.8), x - ht, top + H * 0.16 * st, x - ht, tipBase)
+        + C(x - ht, tipBase - k * ht, x - k * ht, top, x, top)
+        + C(x + k * ht, top, x + ht, tipBase - k * ht, x + ht, tipBase)
+        + C(x + ht, top + H * 0.16 * st, x + hb, H * T(0.8), x + hb, base)
+        + C(x + hb * 0.6, base + H * 0.03, x - hb * 0.6, base + H * 0.03, x - hb, base) + " Z";
+    }
+
+    return { d, cr, cf, hl };
   }
 
   class Hands {
@@ -129,6 +151,7 @@
       this.wrap = wrapEl;
       this.map = {};            // "left"/"right" -> [{midi, finger}]
       this.byMidi = new Map();  // midi -> fingertip badge element
+      this.hlByMidi = new Map();// midi -> whole-finger highlight path
       this.on = true;
 
       this.overlay = document.createElement("div");
@@ -154,18 +177,23 @@
       kb.highlight = (midis, cls) => {
         origHi(midis, cls);
         (Array.isArray(midis) ? midis : [midis]).forEach((m) => {
-          const tip = this.byMidi.get(m);
-          if (tip) tip.classList.add(cls === "hint" ? "active" : "good");
+          const c = cls === "hint" ? "active" : "good";
+          const tip = this.byMidi.get(m), fin = this.hlByMidi.get(m);
+          if (tip) tip.classList.add(c);
+          if (fin) fin.classList.add(c);
         });
       };
       kb.clearHighlights = () => {
         origClear();
         this.byMidi.forEach((tip) => tip.classList.remove("active", "good"));
+        this.hlByMidi.forEach((fin) => fin.classList.remove("active", "good"));
       };
       kb.flash = (m, cls, ms = 220) => {
         origFlash(m, cls, ms);
-        const tip = this.byMidi.get(m);
-        if (tip && cls === "good") { tip.classList.add("good"); setTimeout(() => tip.classList.remove("good"), ms); }
+        if (cls !== "good") return;
+        [this.byMidi.get(m), this.hlByMidi.get(m)].forEach((el2) => {
+          if (el2) { el2.classList.add("good"); setTimeout(() => el2.classList.remove("good"), ms); }
+        });
       };
       kb.render = () => { origRender(); this.render(); };
     }
@@ -196,7 +224,18 @@
     render() {
       this.overlay.innerHTML = "";
       this.byMidi = new Map();
+      this.hlByMidi = new Map();
       ["left", "right"].forEach((h) => this._renderHand(h));
+      // Re-sync with the keyboard's current highlights — a re-render (resize,
+      // range change) must not lose the lit finger mid-lesson.
+      this.kb.keyEls.forEach((keyEl, m) => {
+        const cls = keyEl.classList.contains("hl-hint") ? "active"
+          : keyEl.classList.contains("hl-good") ? "good" : null;
+        if (!cls) return;
+        const tip = this.byMidi.get(m), fin = this.hlByMidi.get(m);
+        if (tip) tip.classList.add(cls);
+        if (fin) fin.classList.add(cls);
+      });
     }
 
     _renderHand(handKey) {
@@ -220,7 +259,7 @@
         // Ascending centers relative to the span; the grid is uniform, so the
         // same numbers serve the mirrored left hand.
         const cx = centers.map((c) => c - spanL);
-        const { d, cr, cf } = buildHand(cx, H);
+        const { d, cr, cf, hl } = buildHand(cx, H);
 
         const svg = document.createElementNS(SVGNS, "svg");
         svg.setAttribute("viewBox", "0 0 " + Math.ceil(spanW) + " " + Math.ceil(H * 1.07));
@@ -254,6 +293,15 @@
         piece(d, "hand-shape", "url(#" + gid + ")");
         piece(cr, "hand-crease");
         piece(cf, "hand-cuff");
+        // Whole-finger highlight regions on top of the artwork (finger k → its key).
+        placed.forEach(({ midi, finger }) => {
+          if (!hl[finger]) return;
+          const p = document.createElementNS(SVGNS, "path");
+          p.setAttribute("d", hl[finger]);
+          p.setAttribute("class", "hand-fhl");
+          svg.appendChild(p);
+          this.hlByMidi.set(midi, p);
+        });
         this.overlay.appendChild(svg);
       }
 

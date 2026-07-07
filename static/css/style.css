@@ -289,6 +289,18 @@ a.chip { text-decoration: none; display: inline-flex; align-items: center; }
   animation: keyPulse 1.1s ease-in-out infinite;
 }
 .hand-tip.good { background: var(--ok); color: #07101f; }
+/* Whole-finger highlight — the finger to use glows like the target key. */
+.hand-fhl { fill: transparent; stroke: transparent; transition: fill 0.15s; }
+.hand-fhl.active {
+  fill: rgba(48, 108, 236, 0.85);
+  stroke: #eaf1ff; stroke-width: 2;
+  animation: fingerPulse 1.1s ease-in-out infinite;
+}
+.hand-fhl.good { fill: rgba(38, 165, 94, 0.85); stroke: #eafff1; stroke-width: 2; }
+@keyframes fingerPulse {
+  0%, 100% { opacity: 0.72; }
+  50% { opacity: 1; }
+}
 
 /* ---- Keyboard ---- */
 .keyboard {
