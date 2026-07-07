@@ -256,7 +256,7 @@ a.chip { text-decoration: none; display: inline-flex; align-items: center; }
   position: absolute; top: 10px; left: 14px; right: 14px; bottom: 14px;
   pointer-events: none; z-index: 3;
 }
-.hand-svg { position: absolute; top: 0; height: 107%; filter: drop-shadow(0 3px 5px rgba(0,0,0,0.35)); }
+.hand-svg { position: absolute; top: 0; height: 107%; overflow: visible; filter: drop-shadow(0 3px 5px rgba(0,0,0,0.35)); }
 .hand-svg .hand-shape {
   stroke: rgba(150, 98, 58, 0.65);
   stroke-width: 1.6;
