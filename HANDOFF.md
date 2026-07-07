@@ -2,7 +2,20 @@
 
 _Updated: 2026-07-07_
 
-## Latest — v1.8.13 (sw cache v46): hand rebuilt as a REAL anatomical hand
+## Latest — v1.8.14 (sw cache v47): real bent thumb + taller keys
+Joe: "thumb doesn't look like a thumb, pinky is weird, and make the course keys taller with
+the hand over the key." Fixes in [hands.js](static/js/hands.js) `buildHand()`:
+(1) Thumb is now a DEDICATED long diagonal digit (its own `dThumb` path drawn over the palm)
+rooted deep in the palm near the index/wrist and reaching a fat rounded pad on the c1 key,
+with an outer knuckle bulge + bend + angled nail — the earlier separate-piece thumb floated
+because it stopped near C instead of spanning back to the palm. (2) Pinky longer (tip y 59)
++ wider (4.2u) and the lateral finger bend softened (×0.8, clamp ±1.15) so nothing hooks
+unnaturally. (3) NEW `.kb-wrap.tall` (CSS) — toggling 🖐 Hands ON now grows the lesson/
+trainer keys (clamp 200–330px) so the hand has room; turning it off restores the falling-
+notes lane. Verified in preview (tablet): thumb reads correctly + connected, pinky natural,
+glow-follows thumb→C / pinky→G, zero console errors. Still default-OFF, labeled 🖐 Hands.
+
+## Prev — v1.8.13 (sw cache v46): hand rebuilt as a REAL anatomical hand
 Joe (repeatedly): the old art was "a wood log with 4 pegs" / thumb & pinky swapped-looking.
 `buildHand()` in [hands.js](static/js/hands.js) fully rewritten around a `digit()` helper:
 each of the four fingers is a rounded tapered digit whose KNUCKLE is pulled ~22% toward
