@@ -1,11 +1,11 @@
 /* Simpli Piano — "which finger?" hands overlay (typing-tutor style).
  *
- * Draws two semi-transparent cartoon hands over the on-screen keyboard — a
- * natural hand silhouette per hand (curved tapered fingers, opposed thumb,
- * knuckle/palm creases, palm + sleeve cuff), with a numbered fingertip badge
- * on each key of the current five-finger position, numbered the piano way
- * (thumb = 1 … pinky = 5). When the lesson/trainer highlights a target key,
- * the matching fingertip badge lights up as well.
+ * Draws two semi-transparent hands over the on-screen keyboard. Each hand is
+ * built from separately-shaded parts — a palm plus five rounded, tapered
+ * fingers, each with a cylindrical skin gradient (so it looks 3D, not flat)
+ * and a fingernail — with a numbered badge on the fingertip of each key of the
+ * current five-finger position, numbered the piano way (thumb = 1 … pinky = 5).
+ * When the lesson/trainer highlights a target key, that whole finger glows.
  *
  * Usage:
  *   const hands = new window.Hands(keyboard, kbWrapEl);   // patches keyboard
@@ -14,27 +14,30 @@
  *   hands.set({ left: { thumb: 48 } });        // LH anchored by thumb (Free Play)
  *   hands.setOn(true/false);
  *
- * Geometry is computed in PIXELS at render time (not a stretched viewBox), so
- * finger proportions stay natural at any keyboard size: on wide keyboards the
- * fingers splay apart like a real stretched hand instead of distorting. The
- * silhouette is authored for the right hand and mirrored (scaleX) for the
- * left — the five keys are evenly spaced, so the span is mirror-symmetric.
- * A ResizeObserver re-draws on size changes; keyboard.render() is patched to
- * re-draw when the range changes. Keys outside the mapped five-finger span
- * simply get no finger. */
+ * Geometry is computed in PIXELS at render time so finger proportions stay
+ * natural at any keyboard size (bottom-anchored, height capped so tall Free
+ * Play keys don't stretch the fingers into spindles). The artwork is authored
+ * for the right hand and mirrored (scaleX) for the left. A ResizeObserver
+ * re-draws on size change; keyboard.render() is patched to re-draw on range
+ * change. Keys outside the five-finger span just get a badge, no silhouette. */
 (() => {
   "use strict";
 
   const SVGNS = "http://www.w3.org/2000/svg";
   const { isWhite } = window.Theory;
 
-  // Fingertip TOP per finger (fraction of keyboard height): middle reaches
-  // highest; pads land on the white-key touch area below the black keys.
-  const TOPF = { 2: 0.504, 3: 0.484, 4: 0.555, 5: 0.64 };
-  // Badge tops (fraction of keyboard height), matching the finger pads.
-  const TIP = { 1: 0.75, 2: 0.56, 3: 0.54, 4: 0.61, 5: 0.69 };
+  // Badge tops (fraction of keyboard height) — sit on each finger's pad.
+  const TIP = { 1: 0.75, 2: 0.55, 3: 0.53, 4: 0.60, 5: 0.68 };
 
-  let uid = 0; // unique gradient id per rendered hand
+  // Semi-transparent skin palette (keys read through the hand).
+  const A = 0.76;
+  const SKIN_EDGE = "rgba(193,137,96," + A + ")";   // shaded finger edge
+  const SKIN_MID = "rgba(231,181,142," + A + ")";
+  const SKIN_HI = "rgba(250,218,187," + A + ")";    // lit centre ridge
+  const PALM_TOP = "rgba(244,203,167," + A + ")";
+  const PALM_BOT = "rgba(214,159,116," + A + ")";
+
+  let uid = 0; // unique gradient id per gradient
 
   function whitesFrom(midi, count, dir) {
     const out = [];
@@ -43,115 +46,95 @@
     return out;
   }
 
-  /* How much to lengthen the fingers when the keys are wide relative to the
-     keyboard height — a hand reaching across wide keys looks stretched, not
-     squashed. 1 = artwork proportions. */
-  function stretchFor(sp, H) {
-    return Math.min(Math.max(sp / (H * 0.55), 1), 1.4);
+  // Lengthen fingers a touch when keys are wide vs. tall (natural reach).
+  function stretchFor(sp, H) { return Math.min(Math.max(sp / (H * 0.55), 1), 1.4); }
+  // A hand is never taller than ~3.2 key-widths — hug the bottom of tall keys.
+  function handHeight(sp, H) { return Math.min(H, sp * 3.2); }
+
+  /* Rounded, tapered finger from base (x0,y0,hw0) to a rounded tip
+     (x1,y1,hw1). Returns the SVG path plus a gradient axis running ACROSS the
+     finger at mid-length, which gives it a cylindrical (3D) shading. */
+  function capsule(x0, y0, x1, y1, hw0, hw1) {
+    const dx = x1 - x0, dy = y1 - y0, len = Math.hypot(dx, dy) || 1;
+    const ux = dx / len, uy = dy / len;          // along (base → tip)
+    const px = -uy, py = ux;                      // perpendicular unit
+    const f = (a, b) => a.toFixed(1) + " " + b.toFixed(1);
+    const aLx = x0 + px * hw0, aLy = y0 + py * hw0, aRx = x0 - px * hw0, aRy = y0 - py * hw0;
+    const bLx = x1 + px * hw1, bLy = y1 + py * hw1, bRx = x1 - px * hw1, bRy = y1 - py * hw1;
+    const clx = bLx + ux * hw1 * 1.33, cly = bLy + uy * hw1 * 1.33;
+    const crx = bRx + ux * hw1 * 1.33, cry = bRy + uy * hw1 * 1.33;
+    const path = "M " + f(aLx, aLy) + " L " + f(bLx, bLy)
+      + " C " + f(clx, cly) + ", " + f(crx, cry) + ", " + f(bRx, bRy)
+      + " L " + f(aRx, aRy) + " Z";
+    const mx = (x0 + x1) / 2, my = (y0 + y1) / 2, gw = (hw0 + hw1) / 2;
+    return { path, g: [mx + px * gw, my + py * gw, mx - px * gw, my - py * gw], ux, uy };
   }
 
-  /* Build the right-hand silhouette in px. cx = 5 ascending fingertip x's
-     (thumb..pinky for a right hand), H = keyboard height px. Returns path
-     strings for the hand, the creases, and the cuff. */
-  /* Natural hand height in px: a hand is never taller than ~3.2 key-widths,
-     so on tall keyboards (Free Play) it hugs the bottom of the keys instead
-     of stretching into long spindly fingers. */
-  function handHeight(sp, H) {
-    return Math.min(H, sp * 3.2);
-  }
-
+  /* Build one right hand for fingertip x-centres cx=[thumb..pinky], height H.
+     Returns { parts:[{finger, body, nail}], palm, palmG, cr, cf }. */
   function buildHand(cx, H) {
     const n = (v) => (+v).toFixed(1);
-    const C = (a, b, c2, d, e2, f) => " C " + n(a) + " " + n(b) + ", " + n(c2) + " " + n(d) + ", " + n(e2) + " " + n(f);
-    const k = 0.5523; // circle-approximation constant for rounded tips
     const [c1, c2, c3, c4, c5] = cx;
-    const sp = (c5 - c1) / 4 || H * 0.4;               // key spacing
-    const He = handHeight(sp, H);                      // hand's own height
-    const Y = (f) => H - He * (1 - f);                 // artwork fraction → px, bottom-anchored
+    const sp = (c5 - c1) / 4 || H * 0.4;
+    const He = handHeight(sp, H);
+    const Y = (fr) => H - He * (1 - fr);            // artwork fraction → px (bottom-anchored)
     const st = stretchFor(sp, He);
-    // Raise upper-hand y-fractions (fingers/thumb) by the stretch factor;
-    // the palm/valley/wrist zone (>= 0.87) stays anchored at the bottom.
-    const T = (f) => (f >= 0.87 ? f : 1 - (1 - f) * st);
-    // Finger half-width: proportional to hand height, never wide enough to
-    // touch the neighbouring finger even on narrow keys.
-    const fw = Math.min(Math.max(He * 0.055, sp * 0.14), sp * 0.34, He * 0.085);
-    const hwT = [fw, fw * 1.05, fw * 0.95, fw * 0.85]; // tip half-widths (index..pinky)
-    const hwB = hwT.map((v) => v * 1.22);              // base half-widths
-    const r1 = fw * 1.2;                               // thumb radius
-    const e = Math.min(fw * 1.6, sp * 0.35);           // outer palm margin
+    const T = (fr) => (fr >= 0.88 ? fr : 1 - (1 - fr) * st); // stretch upper hand only
+
+    const fw = Math.min(Math.max(sp * 0.17, He * 0.05), sp * 0.23, He * 0.11);
     const FING = [c2, c3, c4, c5];
-    const TOPS = [TOPF[2], TOPF[3], TOPF[4], TOPF[5]].map((f) => Y(T(f)));
-    const vy = [0.884, 0.888, 0.894].map((f) => Y(f)); // web valleys
-    const yB = Y(1.07);                                // wrist bottom
-    const wristL = c2 - sp * 0.7, wristR = c5 + e * 0.35;
+    const tipFr = [0.505, 0.482, 0.556, 0.64];     // index, middle, ring, pinky tops
+    const hwTip = [fw * 0.9, fw * 0.95, fw * 0.88, fw * 0.76];
+    const hwBase = hwTip.map((v) => v * 1.3);
+    const baseY = Y(0.885);
 
-    let d = "M " + n(wristL) + " " + n(Y(1.04));
-    // outer palm edge up + thumb (tip centred on the thumb's key)
-    d += C(c2 - sp * 0.8, Y(0.98), c1 - e * 0.8, Y(0.92), c1 - e, Y(T(0.86)));
-    d += C(c1 - e - r1 * 0.2, Y(T(0.815)), c1 - r1 * 1.5, Y(T(0.79)), c1 - r1 * 1.45, Y(T(0.765)));
-    d += C(c1 - r1 * 1.3, Y(T(0.716)), c1 - r1 * 0.35, Y(T(0.698)), c1 + r1 * 0.4, Y(T(0.712)));
-    d += C(c1 + r1 * 0.95, Y(T(0.722)), c1 + r1 * 1.15, Y(T(0.748)), c1 + r1 * 1.05, Y(T(0.775)));
-    d += C(c1 + r1 * 1.5, Y(T(0.83)), (c1 + c2) / 2, Y(0.9), c2 - hwB[0] * 1.05, Y(0.925));
-    // index → pinky, webbed together
+    const parts = [];
     for (let i = 0; i < 4; i++) {
-      const x = FING[i], hb = hwB[i], ht = hwT[i], top = TOPS[i];
-      const tipBase = top + ht;
-      d += C(x - hb, Y(T(0.8)), x - ht, top + He * 0.16 * st, x - ht, tipBase); // left edge up
-      d += C(x - ht, tipBase - k * ht, x - k * ht, top, x, top);                // rounded tip
-      d += C(x + k * ht, top, x + ht, tipBase - k * ht, x + ht, tipBase);
-      if (i < 3) {
-        const nx = FING[i + 1], nhb = hwB[i + 1], vc = (x + nx) / 2, v = vy[i];
-        d += C(x + ht, top + He * 0.16 * st, x + hb, v - He * 0.1, x + hb * 1.02, v - He * 0.035);
-        d += C(x + hb * 1.3, v + He * 0.005, vc - fw * 0.5, v + He * 0.012, vc, v + He * 0.012);
-        d += C(vc + fw * 0.5, v + He * 0.012, nx - nhb * 1.3, v + He * 0.005, nx - nhb * 1.02, v - He * 0.035);
-      } else {
-        d += C(x + ht, top + He * 0.16 * st, x + hb, Y(T(0.84)), x + hb * 1.02, Y(0.875));
-      }
+      const x = FING[i], tip = Y(T(tipFr[i]));
+      const cap = capsule(x, baseY, x, tip, hwBase[i], hwTip[i]);
+      parts.push({ finger: i + 2, body: cap,
+        nail: { cx: x, cy: tip + hwTip[i] * 1.15, rx: hwTip[i] * 0.6, ry: hwTip[i] * 0.92, rot: 0 } });
     }
-    // outer palm right, down to the wrist
-    d += C(c5 + e, Y(0.91), c5 + e * 1.05, Y(0.95), c5 + e * 0.85, Y(0.985));
-    d += C(c5 + e * 0.6, Y(1.02), wristR, Y(1.045), wristR - e * 0.2, yB);
-    d += " L " + n(wristL + sp * 0.06) + " " + n(yB);
-    d += C(wristL + sp * 0.02, Y(1.058), wristL, Y(1.05), wristL, Y(1.04)) + " Z";
+    // Thumb: fat angled capsule from the palm's lower-right to the tip on c1.
+    {
+      const tipX = c1, tipY = Y(T(0.72));
+      const bx = c2 - fw * 0.35, by = Y(0.965);
+      const cap = capsule(bx, by, tipX, tipY, fw * 1.18, fw * 0.98);
+      const ang = Math.atan2(tipY - by, tipX - bx) * 180 / Math.PI + 90;
+      parts.push({ finger: 1, body: cap,
+        nail: { cx: tipX + (bx - tipX) * 0.15, cy: tipY + (by - tipY) * 0.15,
+          rx: fw * 0.6, ry: fw * 0.86, rot: ang } });
+    }
 
-    // knuckle creases + thumb joint + palm line
+    // Palm behind the fingers, with a thumb-side (thenar) bulge toward c1.
+    const wr = c5 + fw * 1.5;
+    const palm =
+      "M " + n(c2 - fw * 1.15) + " " + n(Y(0.88))
+      + " Q " + n((c2 + c3) / 2) + " " + n(Y(0.905)) + " " + n(c3) + " " + n(Y(0.885))
+      + " Q " + n((c3 + c4) / 2) + " " + n(Y(0.905)) + " " + n(c4) + " " + n(Y(0.888))
+      + " Q " + n((c4 + c5) / 2) + " " + n(Y(0.905)) + " " + n(c5) + " " + n(Y(0.892))
+      + " C " + n(c5 + fw * 0.7) + " " + n(Y(0.868)) + ", " + n(wr) + " " + n(Y(0.89)) + ", " + n(wr) + " " + n(Y(0.955))
+      + " C " + n(wr) + " " + n(Y(1.02)) + ", " + n(c3) + " " + n(Y(1.075)) + ", " + n((c1 + c2) / 2) + " " + n(Y(1.045))
+      + " C " + n(c1 - fw * 0.3) + " " + n(Y(1.0)) + ", " + n(c1 - fw * 1.05) + " " + n(Y(0.95)) + ", " + n(c1 - fw * 0.7) + " " + n(Y(0.905))
+      + " C " + n(c1) + " " + n(Y(0.858)) + ", " + n(c2 - fw * 1.45) + " " + n(Y(0.85)) + ", " + n(c2 - fw * 1.15) + " " + n(Y(0.88))
+      + " Z";
+    const palmG = [0, Y(0.85), 0, Y(1.05)];
+
+    // Knuckle creases (small arcs mid-finger) + a palm crease.
     let cr = "";
     for (let i = 0; i < 4; i++) {
-      const x = FING[i], ht = hwT[i], cy = TOPS[i] + He * 0.15;
-      cr += "M " + n(x - ht * 0.7) + " " + n(cy) + " Q " + n(x) + " " + n(cy + He * 0.018) + " " + n(x + ht * 0.7) + " " + n(cy) + " ";
+      const x = FING[i], tip = Y(T(tipFr[i])), cy = tip + (baseY - tip) * 0.42, hw = hwTip[i];
+      cr += "M " + n(x - hw * 0.65) + " " + n(cy) + " Q " + n(x) + " " + n(cy + He * 0.015) + " " + n(x + hw * 0.65) + " " + n(cy) + " ";
     }
-    cr += "M " + n(c1 - r1 * 0.5) + " " + n(Y(T(0.82))) + " Q " + n(c1 + r1 * 0.4) + " " + n(Y(T(0.838))) + " " + n(c1 + r1 * 0.9) + " " + n(Y(T(0.82))) + " ";
-    cr += "M " + n(c2) + " " + n(Y(0.962)) + " Q " + n((c2 + c4) / 2) + " " + n(Y(1.002)) + " " + n(c4 + hwB[2]) + " " + n(Y(0.965));
+    cr += "M " + n(c2) + " " + n(Y(0.96)) + " Q " + n((c2 + c4) / 2) + " " + n(Y(0.998)) + " " + n(c4 + fw) + " " + n(Y(0.968));
 
-    // sleeve cuff across the wrist
-    const cf = "M " + n(wristL - sp * 0.04) + " " + n(Y(1.012))
-      + C((wristL + wristR) / 2 - sp * 0.2, Y(1.048), (wristL + wristR) / 2 + sp * 0.2, Y(1.048), wristR + e * 0.1, Y(1.012))
-      + " L " + n(wristR - e * 0.2) + " " + n(yB)
-      + " L " + n(wristL + sp * 0.06) + " " + n(yB) + " Z";
+    // Sleeve cuff at the wrist.
+    const cf = "M " + n(c1 - fw * 0.2) + " " + n(Y(1.03))
+      + " Q " + n(c3) + " " + n(Y(1.064)) + " " + n(wr) + " " + n(Y(1.03))
+      + " L " + n(wr) + " " + n(Y(1.075))
+      + " L " + n(c1 - fw * 0.2) + " " + n(Y(1.075)) + " Z";
 
-    // Per-finger highlight regions (finger number 1..5 → closed capsule that
-    // lights up when that finger's key is the target).
-    const hl = {};
-    {
-      // thumb: a tilted blob over the thumb artwork
-      const cy = Y(T(0.745));
-      hl[1] = "M " + n(c1 - r1 * 1.35) + " " + n(cy + r1 * 0.3)
-        + C(c1 - r1 * 1.45, cy - r1 * 0.75, c1 - r1 * 0.5, cy - r1 * 1.25, c1 + r1 * 0.35, cy - r1 * 0.85)
-        + C(c1 + r1 * 1.15, cy - r1 * 0.45, c1 + r1 * 1.35, cy + r1 * 0.55, c1 + r1 * 0.75, cy + r1 * 1.05)
-        + C(c1 + r1 * 0.1, cy + r1 * 1.5, c1 - r1 * 1.1, cy + r1 * 1.15, c1 - r1 * 1.35, cy + r1 * 0.3) + " Z";
-    }
-    for (let i = 0; i < 4; i++) {
-      const x = FING[i], hb = hwB[i], ht = hwT[i], top = TOPS[i];
-      const tipBase = top + ht, base = Y(0.915);
-      hl[i + 2] = "M " + n(x - hb) + " " + n(base)
-        + C(x - hb, Y(T(0.8)), x - ht, top + He * 0.16 * st, x - ht, tipBase)
-        + C(x - ht, tipBase - k * ht, x - k * ht, top, x, top)
-        + C(x + k * ht, top, x + ht, tipBase - k * ht, x + ht, tipBase)
-        + C(x + ht, top + He * 0.16 * st, x + hb, Y(T(0.8)), x + hb, base)
-        + C(x + hb * 0.6, base + He * 0.03, x - hb * 0.6, base + He * 0.03, x - hb, base) + " Z";
-    }
-
-    return { d, cr, cf, hl };
+    return { parts, palm, palmG, cr, cf };
   }
 
   class Hands {
@@ -168,7 +151,6 @@
       wrapEl.classList.add("has-hands");
       wrapEl.appendChild(this.overlay);
 
-      // Geometry is in px → re-draw when the keyboard's box changes size.
       if (window.ResizeObserver) {
         let raf = null;
         this._ro = new ResizeObserver(() => {
@@ -178,7 +160,7 @@
         this._ro.observe(this.overlay);
       }
 
-      // Mirror the keyboard's visual state onto the fingertips, and re-draw
+      // Mirror the keyboard's highlight state onto the fingers, and re-draw
       // whenever the keyboard re-renders (range/size change).
       const kb = this.kb;
       const origHi = kb.highlight.bind(kb), origClear = kb.clearHighlights.bind(kb);
@@ -207,9 +189,7 @@
       kb.render = () => { origRender(); this.render(); };
     }
 
-    /* mapping: { right: midi | {thumb: midi}, left: midi | {pinky|thumb: midi} }
-       Right hand spans 5 white keys up from the thumb. Left hand: pinky-anchored
-       spans up (C position), thumb-anchored spans down (Free Play). */
+    /* mapping: { right: midi | {thumb: midi}, left: midi | {pinky|thumb: midi} } */
     set(mapping) {
       this.map = {};
       if (mapping.right != null) {
@@ -225,18 +205,15 @@
       this.render();
     }
 
-    setOn(on) {
-      this.on = on;
-      this.overlay.style.display = on ? "" : "none";
-    }
+    setOn(on) { this.on = on; this.overlay.style.display = on ? "" : "none"; }
 
     render() {
       this.overlay.innerHTML = "";
       this.byMidi = new Map();
       this.hlByMidi = new Map();
       ["left", "right"].forEach((h) => this._renderHand(h));
-      // Re-sync with the keyboard's current highlights — a re-render (resize,
-      // range change) must not lose the lit finger mid-lesson.
+      // Re-sync with the keyboard's current highlights so a re-render (resize,
+      // range change) doesn't lose the lit finger mid-lesson.
       this.kb.keyEls.forEach((keyEl, m) => {
         const cls = keyEl.classList.contains("hl-hint") ? "active"
           : keyEl.classList.contains("hl-good") ? "good" : null;
@@ -259,71 +236,78 @@
       });
       if (!placed.length) return;
 
-      // The silhouette needs all five keys on screen (it spans them); with
-      // fewer visible we still show the number badges.
       if (placed.length === 5) {
         const centers = placed.map((p) => ((p.r.leftPct + p.r.widthPct / 2) / 100) * W).sort((a, b) => a - b);
         const spanL = Math.min(...placed.map((p) => (p.r.leftPct / 100) * W));
         const spanW = Math.max(...placed.map((p) => ((p.r.leftPct + p.r.widthPct) / 100) * W)) - spanL;
-        // Ascending centers relative to the span; the grid is uniform, so the
-        // same numbers serve the mirrored left hand.
         const cx = centers.map((c) => c - spanL);
-        const { d, cr, cf, hl } = buildHand(cx, H);
+        const model = buildHand(cx, H);
+        const f2midi = {}; placed.forEach((p) => (f2midi[p.finger] = p.midi));
 
         const svg = document.createElementNS(SVGNS, "svg");
-        svg.setAttribute("viewBox", "0 0 " + Math.ceil(spanW) + " " + Math.ceil(H * 1.07));
+        svg.setAttribute("viewBox", "0 0 " + Math.ceil(spanW) + " " + Math.ceil(H * 1.08));
         svg.setAttribute("preserveAspectRatio", "none");
         svg.setAttribute("class", "hand-svg");
         svg.style.left = (spanL / W) * 100 + "%";
         svg.style.width = (spanW / W) * 100 + "%";
         if (handKey === "left") svg.style.transform = "scaleX(-1)";
-        // Soft skin gradient (lighter at the fingers, warmer at the palm).
-        const gid = "hand-g" + (++uid);
         const defs = document.createElementNS(SVGNS, "defs");
-        const grad = document.createElementNS(SVGNS, "linearGradient");
-        grad.setAttribute("id", gid);
-        grad.setAttribute("x1", "0"); grad.setAttribute("y1", "0");
-        grad.setAttribute("x2", "0"); grad.setAttribute("y2", "1");
-        [["0%", "rgba(242, 205, 170, 0.55)"], ["100%", "rgba(224, 168, 124, 0.55)"]].forEach(([off, col]) => {
-          const stop = document.createElementNS(SVGNS, "stop");
-          stop.setAttribute("offset", off); stop.setAttribute("stop-color", col);
-          grad.appendChild(stop);
-        });
-        defs.appendChild(grad);
         svg.appendChild(defs);
-        const piece = (path, cls, fill) => {
+
+        const grad = (axis, stops) => {
+          const id = "hg" + (++uid);
+          const g = document.createElementNS(SVGNS, "linearGradient");
+          g.setAttribute("id", id);
+          g.setAttribute("gradientUnits", "userSpaceOnUse");
+          g.setAttribute("x1", axis[0].toFixed(1)); g.setAttribute("y1", axis[1].toFixed(1));
+          g.setAttribute("x2", axis[2].toFixed(1)); g.setAttribute("y2", axis[3].toFixed(1));
+          stops.forEach(([o, c]) => {
+            const s = document.createElementNS(SVGNS, "stop");
+            s.setAttribute("offset", o); s.setAttribute("stop-color", c);
+            g.appendChild(s);
+          });
+          defs.appendChild(g);
+          return "url(#" + id + ")";
+        };
+        const addPath = (d, cls, fill) => {
           const p = document.createElementNS(SVGNS, "path");
-          p.setAttribute("d", path);
-          p.setAttribute("class", cls);
+          p.setAttribute("d", d); p.setAttribute("class", cls);
           if (fill) p.setAttribute("fill", fill);
           p.setAttribute("vector-effect", "non-scaling-stroke");
           svg.appendChild(p);
+          return p;
         };
-        piece(d, "hand-shape", "url(#" + gid + ")");
-        piece(cr, "hand-crease");
-        piece(cf, "hand-cuff");
-        // Whole-finger highlight regions on top of the artwork (finger k → its key).
-        placed.forEach(({ midi, finger }) => {
-          if (!hl[finger]) return;
-          const p = document.createElementNS(SVGNS, "path");
-          p.setAttribute("d", hl[finger]);
-          p.setAttribute("class", "hand-fhl");
-          svg.appendChild(p);
-          this.hlByMidi.set(midi, p);
+        const FINGER_STOPS = [["0%", SKIN_EDGE], ["28%", SKIN_MID], ["50%", SKIN_HI], ["72%", SKIN_MID], ["100%", SKIN_EDGE]];
+
+        // Palm first (behind), then thumb, then fingers index→pinky on top.
+        addPath(model.palm, "hand-shape", grad(model.palmG, [["0%", PALM_TOP], ["100%", PALM_BOT]]));
+        [1, 2, 3, 4, 5].forEach((fn) => {
+          const part = model.parts.find((p) => p.finger === fn);
+          if (!part) return;
+          addPath(part.body.path, "hand-shape", grad(part.body.g, FINGER_STOPS));
+          const hp = addPath(part.body.path, "hand-fhl", null); // whole-finger glow
+          this.hlByMidi.set(f2midi[fn], hp);
+          const nl = document.createElementNS(SVGNS, "ellipse");
+          nl.setAttribute("cx", part.nail.cx.toFixed(1)); nl.setAttribute("cy", part.nail.cy.toFixed(1));
+          nl.setAttribute("rx", part.nail.rx.toFixed(1)); nl.setAttribute("ry", part.nail.ry.toFixed(1));
+          nl.setAttribute("class", "hand-nail");
+          if (part.nail.rot) nl.setAttribute("transform", "rotate(" + part.nail.rot.toFixed(1) + " " + part.nail.cx.toFixed(1) + " " + part.nail.cy.toFixed(1) + ")");
+          svg.appendChild(nl);
         });
+        addPath(model.cr, "hand-crease");
+        addPath(model.cf, "hand-cuff");
         this.overlay.appendChild(svg);
       }
 
-      // Badges ride the fingertips — same bottom-anchored, stretched math
-      // as the silhouette so they stay on the finger pads.
+      // Number badges ride the fingertips (bottom-anchored, same stretch math).
       const keyW = (placed[0].r.widthPct / 100) * W;
       const He = handHeight(keyW, H);
       const st = stretchFor(keyW, He);
       placed.forEach(({ midi, finger, r }) => {
         const cxPct = r.leftPct + r.widthPct / 2;
-        const wPx = Math.min((r.widthPct / 100) * W * 0.52, He * 0.115, 30);
-        const tf = 1 - (1 - TIP[finger]) * st;         // stretched artwork fraction
-        const topPx = H - He * (1 - tf);               // bottom-anchored
+        const wPx = Math.min((r.widthPct / 100) * W * 0.5, He * 0.11, 28);
+        const tf = 1 - (1 - TIP[finger]) * st;
+        const topPx = H - He * (1 - tf);
         const tip = document.createElement("div");
         tip.className = "hand-tip";
         tip.textContent = finger;
