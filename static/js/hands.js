@@ -123,36 +123,61 @@
     // Knuckles fan toward the palm centre; tips stay on their key centres.
     const pcx = (c2 + c5) / 2 - 0.04 * (c5 - c2);
     const FC = [c2, c3, c4, c5];
-    const TIPY = [48, 43, 46.5, 63];
-    const HWT = [5.2, 5.5, 5.0, 3.8].map((v) => v * u);
+    const TIPY = [48, 43, 46.5, 59];               // pinky a bit longer than before
+    const HWT = [5.2, 5.5, 5.0, 4.2].map((v) => v * u); // pinky a bit wider
     const HWB = HWT.map((v) => v * 1.28);
     const baseY = ys(89), valleyY = ys(91.2);
     const digits = [];
     for (let i = 0; i < 4; i++) {
       const fcx = FC[i];
       const bx = fcx + (pcx - fcx) * 0.22;
-      const bend = Math.max(-1.3, Math.min(1.3, (pcx - fcx) / sp)) * 1.1 * u;
+      // Gentle lateral bow toward the hand centre — least on the middle finger,
+      // softened overall so nothing hooks unnaturally (the pinky looked odd).
+      const bend = Math.max(-1.15, Math.min(1.15, (pcx - fcx) / sp)) * 0.8 * u;
       digits.push(digit(bx, baseY, fcx, ys(TIPY[i] + 4), HWB[i], HWT[i], bend));
     }
-    // Thumb: rooted low by the wrist, long diagonal reach to its key.
-    const th = digit(X(24.5), ys(100), c1, ys(77), 6.0 * u, 4.7 * u, -1.3 * u);
 
     const wristL = X(21), wristR = c5 + 2.0 * u;
-    const notch = [c1 + (digits[0].baseL[0] - c1) * 0.55, ys(90.6)]; // thumb–index web
 
-    // ---- Unified silhouette (clockwise from the left wrist corner) ----
+    // ---- Thumb — a dedicated BENT digit with a fat pad, drawn as its own
+    // piece over the lower-left palm. A symmetric capsule reads as a stubby
+    // finger; a real thumb has a wide base, an outer knuckle bulge, a hook,
+    // and a broad rounded pad. Tip pad sits on the c1 key. ----
+    const thumb = (() => {
+      // Long diagonal digit: root deep in the palm (near the index/wrist) →
+      // fat rounded pad on the c1 key, with an outer knuckle bulge and a bend.
+      const bx = X(25.5), by = ys(100), tx = c1, ty = ys(81);
+      const dxv = tx - bx, dyv = ty - by, len = Math.hypot(dxv, dyv) || 1;
+      const ux = dxv / len, uy = dyv / len, px = -uy, py = ux;
+      const off = (x, y, s) => [x + px * s, y + py * s];
+      const along = (x, y, s) => [x + ux * s, y + uy * s];
+      const wBase = 6.0 * u, wKnuck = 6.5 * u, wPad = 4.7 * u;
+      const kx = bx + dxv * 0.36, ky = by + dyv * 0.36;      // knuckle (MCP) point
+      const baseO = off(bx, by, -wBase), baseI = off(bx, by, wBase);
+      const kO = off(kx, ky, -wKnuck), kI = off(kx, ky, wBase * 0.92);
+      const padO = off(tx, ty, -wPad), padI = off(tx, ty, wPad);
+      const apex = along(tx, ty, wPad * 1.18);
+      const closed = "M " + Pt(baseO)
+        + Cp([baseO[0] + ux * len * 0.1, baseO[1] + uy * len * 0.1], along(kO[0], kO[1], -len * 0.1), kO)      // outer, bulging knuckle
+        + Cp(along(kO[0], kO[1], len * 0.14), [padO[0] - ux * len * 0.14, padO[1] - uy * len * 0.14], padO)    // up to pad outer
+        + Cp(along(padO[0], padO[1], wPad * 0.55), [apex[0] - px * wPad * 0.5, apex[1] - py * wPad * 0.5], apex)  // round the pad
+        + Cp([apex[0] + px * wPad * 0.5, apex[1] + py * wPad * 0.5], along(padI[0], padI[1], wPad * 0.55), padI)
+        + Cp([padI[0] - ux * len * 0.18, padI[1] - uy * len * 0.18], along(kI[0], kI[1], len * 0.16), kI)      // inner edge down
+        + Cp(along(kI[0], kI[1], -len * 0.12), [baseI[0] + ux * len * 0.1, baseI[1] + uy * len * 0.1], baseI)  // into the palm
+        + " Z";
+      const nc = along(tx, ty, wPad * 0.05);
+      const nail = { cx: nc[0], cy: nc[1], rx: wPad * 0.5, ry: wPad * 0.72,
+        rot: Math.atan2(uy, ux) * 180 / Math.PI + 90 };
+      const jm = [bx + dxv * 0.52, by + dyv * 0.52];
+      const creases = "M " + Pt(off(jm[0], jm[1], -wKnuck * 0.55)) + " Q " + P(jm[0] + ux * 2, jm[1] + uy * 2)
+        + " " + Pt(off(jm[0], jm[1], wBase * 0.5)) + " ";
+      return { closed, nail, creases };
+    })();
+
+    // ---- Palm + four fingers silhouette (the thumb is a separate piece) ----
     let d = "M " + P(wristL, ys(106));
-    // up to the thumb's outer base (the thumb root sits at the wrist)
-    d += Cp([X(20), ys(104)], [th.baseL[0] - 1.2 * u, th.baseL[1] + 3 * u], th.baseL);
-    d += th.eL + th.cap;                          // outer edge + broad tilted tip
-    // inner thumb edge down into the DEEP thumb–index notch, then up to the index knuckle
-    {
-      const tR = th.baseR; // where the inner edge would land
-      d += Cp([notch[0] - (notch[0] - c1) * 0.7, ys(80)], [notch[0] - 2.5 * u, notch[1] - 4 * u], notch);
-      d += Cp([notch[0] + (digits[0].baseL[0] - notch[0]) * 0.45, notch[1]],
-              [digits[0].baseL[0] - 1.5 * u, digits[0].baseL[1] + 1.5 * u], digits[0].baseL);
-      void tR;
-    }
+    // left palm edge rising to the index knuckle (the thumb overlaps below)
+    d += Cp([X(19.5), ys(100)], [digits[0].baseL[0] - 3.0 * u, ys(93)], digits[0].baseL);
     // four fingers, webbed together
     for (let i = 0; i < 4; i++) {
       d += digits[i].eL + digits[i].cap + digits[i].eR;
@@ -173,10 +198,10 @@
 
     // ---- Nails ----
     const nails = digits.map((f) => f.nail);
-    nails.push(th.nail);
+    nails.push(thumb.nail);
 
     // ---- Creases: finger joints (from the digits), thumb joint, palm ----
-    let cr = digits.map((f) => f.creases).join("") + th.creases;
+    let cr = digits.map((f) => f.creases).join("") + thumb.creases;
     cr += "M " + P(X(28), ys(96.5)) + " Q " + P(X(46), ys(101.5)) + " " + P(X(70), ys(97.5)) + " ";
     // metacarpal hints running from each web valley toward the wrist
     for (let i = 0; i < 3; i++) {
@@ -192,10 +217,10 @@
       + " L " + P(wristL - 0.6 * u, ys(128)) + " Z";
 
     // ---- Whole-finger glow regions (finger number → closed outline) ----
-    const hl = { 1: th.closed };
+    const hl = { 1: thumb.closed };
     digits.forEach((f, i) => { hl[i + 2] = f.closed; });
 
-    return { d, nails, cr, cf, hl, He, st };
+    return { d, dThumb: thumb.closed, nails, cr, cf, hl, He, st };
   }
 
   class Hands {
@@ -346,6 +371,7 @@
           return p;
         };
         addPath(model.d, "hand-shape", "url(#" + gid + ")");
+        addPath(model.dThumb, "hand-shape", "url(#" + gid + ")"); // thumb over the palm
         model.nails.forEach((nl) => {
           const e2 = document.createElementNS(SVGNS, "ellipse");
           e2.setAttribute("cx", nl.cx.toFixed(1)); e2.setAttribute("cy", nl.cy.toFixed(1));

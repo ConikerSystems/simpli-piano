@@ -77,12 +77,14 @@
   // ALWAYS starts OFF when a page opens (no persistence — Joe's call); the
   // learner taps 🖐 Hands to show it for the current screen.
   const handsOn = () => false;
-  function fingersChip(getHands) {
+  function fingersChip(getHands, kbWrap) {
     let on = false;
     const b = el("button", { class: "chip", onclick: () => {
       on = !on;
       const h = getHands();
       if (h) h.setOn(on);
+      // Grow the keys while hands are shown so the hand has room to look real.
+      if (kbWrap) kbWrap.classList.toggle("tall", on);
       b.classList.toggle("active", on);
     } }, "🖐 Hands");
     return b;
@@ -487,7 +489,7 @@
     let hands = null;
     const controls = el("div", { class: "lesson-controls" }, [
       modeBtn, el("label", { class: "tempo" }, [el("span", {}, "Tempo"), tempo, tempoVal]),
-      fingersChip(() => hands), listenBtn, startBtn,
+      fingersChip(() => hands, kbWrap), listenBtn, startBtn,
     ]);
     view.append(el("div", { class: "lesson" }, [controls, progress, status, lane, kbWrap]));
 
@@ -817,7 +819,7 @@
     const showKeyBtn = el("button", { class: "chip" + (opts.showKey !== false ? " active" : ""),
       onclick: () => { const on = !showKeyBtn.classList.contains("active"); showKeyBtn.classList.toggle("active", on); trainer.setShowKey(on); } }, "Show key");
     const controls = el("div", { class: "lesson-controls" }, [
-      showKeyBtn, fingersChip(() => hands),
+      showKeyBtn, fingersChip(() => hands, kbWrap),
       el("button", { class: "chip", onclick: () => trainer.next() }, "Skip ›"),
     ]);
     view.append(el("div", { class: "lesson" }, [controls, stats, staff, kbWrap]));

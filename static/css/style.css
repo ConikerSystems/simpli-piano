@@ -249,6 +249,8 @@ a.chip { text-decoration: none; display: inline-flex; align-items: center; }
 /* Keyboard wrapper */
 .kb-wrap { flex: 0 0 auto; height: clamp(140px, 26vh, 230px); padding: 10px 14px 14px; }
 .kb-wrap.grow { flex: 1 1 auto; height: auto; }
+/* Taller keys in lessons/drills so the hand overlay has room to look natural. */
+.kb-wrap.tall { height: clamp(200px, 40vh, 330px); }
 
 /* ---- "Which finger?" hands overlay (typing-tutor style) ---- */
 .kb-wrap.has-hands { position: relative; }
