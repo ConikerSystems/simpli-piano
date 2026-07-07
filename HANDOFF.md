@@ -2,7 +2,13 @@
 
 _Updated: 2026-07-07_
 
-## Latest — v1.8.9 (sw cache v42): the hand is ONE continuous silhouette
+## Latest — v1.8.10 (sw cache v43): Fingers overlay defaults OFF
+Joe: fingers should be toggled off by default on all pages; the user turns them on.
+`handsOn()` in app.js now defaults false (`piano.showHands === "1"`); the 🖐 Fingers chip
+turns it on and the choice persists device-wide. Verified fresh-user default off in
+Lesson/Free Play, chip toggles + persists.
+
+## Previous — v1.8.9 (sw cache v42): the hand is ONE continuous silhouette
 Joe rejected v1.8.8 ("wood log with 4 pegs, thumb like a straight stick"). `buildHand()`
 now emits a single unified hand outline: fingers grow out of the hand through smooth
 gap-proportional web valleys on an arched knuckle line (no flat deck between fingers),
