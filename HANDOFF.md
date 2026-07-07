@@ -1,6 +1,18 @@
 # Simpli Piano — Session Handoff
 
-_Updated: 2026-07-06_
+_Updated: 2026-07-07_
+
+## Latest — v1.8.8 (sw cache v41): realistic hands
+Joe: the old hand overlay looked like a "scary" lumpy blob. **Rewrote `static/js/hands.js`
+rendering** from one flat outline path into separately-shaded parts: a palm plus five
+rounded, tapered finger **capsules**, each with a per-finger cylindrical skin gradient
+(edge→mid→highlight→mid→edge across its width, `userSpaceOnUse`) and an **ellipse
+fingernail**; the thumb is an angled capsule with the correct thenar-side palm bulge. Still
+bottom-anchored with height capped at ~3.2 key-widths (natural at any key size) and mirrored
+via `scaleX(-1)` for the left hand. Whole-finger glow softened to 0.6 alpha so the finger
+reads through the highlight. Verified in preview (Twinkle lesson highlight-follow, Free Play
+L/R at mobile + tablet widths, 0 console errors). Toggle chip label is **🖐 Fingers**.
+
 
 ## Where things stand
 **v1.8.7 (sw cache v40)** — added the **🖐 Fingers hands overlay** (typing-tutor style, Joe's
