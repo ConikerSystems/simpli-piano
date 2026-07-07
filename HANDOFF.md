@@ -3,7 +3,7 @@
 _Updated: 2026-07-06_
 
 ## Where things stand
-**v1.8.6 (sw cache v39)** — added the **🖐 Fingers hands overlay** (typing-tutor style, Joe's
+**v1.8.7 (sw cache v40)** — added the **🖐 Fingers hands overlay** (typing-tutor style, Joe's
 request from a typing.com screenshot): `static/js/hands.js` draws two semi-transparent
 cartoon hands over the on-screen keyboard — a single natural SVG hand silhouette per hand
 (curved fingers of different lengths, opposed thumb, palm + wrist; authored for the right
@@ -29,6 +29,12 @@ buildHand, `.hand-fhl` — keyPulse animates box-shadow which is a no-op on SVG,
 its own `fingerPulse` opacity animation). Gotcha fixed: the ResizeObserver's initial fire
 re-rendered the overlay AFTER the lesson lit the first key, wiping the finger state —
 render() now re-syncs from the keyboard's `.hl-hint`/`.hl-good` key classes.
+v1.8.7 (Joe: "Free Play hands look scary"): on tall keyboards (Free Play's grow layout)
+finger lengths scaled with keyboard height → spindly witch fingers. Fix: `handHeight(sp,H)`
+caps the hand at ~3.2 key-widths tall and everything is bottom-anchored via `Y(f)=H-He*(1-f)`
+(badges use the same math). Free Play's key window now always keeps the full five-finger
+span on screen (`lead` whites below the thumb in `layout()`), so the hand renders in
+portrait too.
 Toggle chip "🖐 Fingers" in Lessons, Read Notes, and Free Play; preference persists
 (`piano.showHands`, device-wide, default ON). Mapping: songs anchor on the C of the octave
 with the most notes (`fingerMapForSong` in app.js; "both" splits at middle C → two hands),

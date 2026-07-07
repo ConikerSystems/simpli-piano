@@ -914,14 +914,21 @@
     // ~real-piano white-key width. Calibrated for an 11" iPad; a touch smaller on a phone.
     const targetKeyPx = () => (dev.tablet ? 112 : 80);
 
+    // The white key `count` whites below `midi` (for sizing the lead-in).
+    function whitesBelow(midi, count) {
+      let m = midi, c = 0;
+      while (c < count && m > 21) { m--; if (window.Theory.isWhite(m)) c++; }
+      return m;
+    }
     function layout() {
       const w = kbEl.clientWidth || kbWrap.clientWidth || window.innerWidth;
       const whiteCount = Math.max(5, Math.min(22, Math.round(w / targetKeyPx())));
       const home = anchorC(hand) + shift * 12;
-      // Place the home C 3 white keys in (leftmost = the G a fourth below) so the
-      // thumb sits a bit toward the middle with lower keys to its left. The left
-      // hand's fingers reach a 5th BELOW the thumb, so give it one more step.
-      const start = Math.max(21, Math.min(96, home - (hand === "left" ? 7 : 5)));
+      // Keep the whole five-finger span on screen (so the hands overlay has
+      // all its keys), with as many lead-in keys below the thumb as fit.
+      // Right hand: fingers reach UP from the thumb; left hand: DOWN.
+      const lead = hand === "left" ? (whiteCount > 5 ? 5 : 4) : Math.min(3, whiteCount - 5);
+      const start = Math.max(21, Math.min(96, whitesBelow(home, lead)));
       kb.setWhiteRange(start, whiteCount);
       // Thumb anchors on the home C for either hand (matches the hint text).
       hands.set(hand === "left" ? { left: { thumb: home } } : { right: home });

@@ -53,70 +53,79 @@
   /* Build the right-hand silhouette in px. cx = 5 ascending fingertip x's
      (thumb..pinky for a right hand), H = keyboard height px. Returns path
      strings for the hand, the creases, and the cuff. */
+  /* Natural hand height in px: a hand is never taller than ~3.2 key-widths,
+     so on tall keyboards (Free Play) it hugs the bottom of the keys instead
+     of stretching into long spindly fingers. */
+  function handHeight(sp, H) {
+    return Math.min(H, sp * 3.2);
+  }
+
   function buildHand(cx, H) {
     const n = (v) => (+v).toFixed(1);
     const C = (a, b, c2, d, e2, f) => " C " + n(a) + " " + n(b) + ", " + n(c2) + " " + n(d) + ", " + n(e2) + " " + n(f);
     const k = 0.5523; // circle-approximation constant for rounded tips
     const [c1, c2, c3, c4, c5] = cx;
     const sp = (c5 - c1) / 4 || H * 0.4;               // key spacing
-    const st = stretchFor(sp, H);
+    const He = handHeight(sp, H);                      // hand's own height
+    const Y = (f) => H - He * (1 - f);                 // artwork fraction → px, bottom-anchored
+    const st = stretchFor(sp, He);
     // Raise upper-hand y-fractions (fingers/thumb) by the stretch factor;
     // the palm/valley/wrist zone (>= 0.87) stays anchored at the bottom.
     const T = (f) => (f >= 0.87 ? f : 1 - (1 - f) * st);
     // Finger half-width: proportional to hand height, never wide enough to
     // touch the neighbouring finger even on narrow keys.
-    const fw = Math.min(Math.max(H * 0.055, sp * 0.14), sp * 0.34, H * 0.085);
+    const fw = Math.min(Math.max(He * 0.055, sp * 0.14), sp * 0.34, He * 0.085);
     const hwT = [fw, fw * 1.05, fw * 0.95, fw * 0.85]; // tip half-widths (index..pinky)
     const hwB = hwT.map((v) => v * 1.22);              // base half-widths
     const r1 = fw * 1.2;                               // thumb radius
     const e = Math.min(fw * 1.6, sp * 0.35);           // outer palm margin
     const FING = [c2, c3, c4, c5];
-    const TOPS = [TOPF[2], TOPF[3], TOPF[4], TOPF[5]].map((f) => T(f) * H);
-    const vy = [0.884, 0.888, 0.894].map((f) => f * H); // web valleys
-    const yB = H * 1.07;                                // wrist bottom
+    const TOPS = [TOPF[2], TOPF[3], TOPF[4], TOPF[5]].map((f) => Y(T(f)));
+    const vy = [0.884, 0.888, 0.894].map((f) => Y(f)); // web valleys
+    const yB = Y(1.07);                                // wrist bottom
     const wristL = c2 - sp * 0.7, wristR = c5 + e * 0.35;
 
-    let d = "M " + n(wristL) + " " + n(H * 1.04);
+    let d = "M " + n(wristL) + " " + n(Y(1.04));
     // outer palm edge up + thumb (tip centred on the thumb's key)
-    d += C(c2 - sp * 0.8, H * 0.98, c1 - e * 0.8, H * 0.92, c1 - e, H * T(0.86));
-    d += C(c1 - e - r1 * 0.2, H * T(0.815), c1 - r1 * 1.5, H * T(0.79), c1 - r1 * 1.45, H * T(0.765));
-    d += C(c1 - r1 * 1.3, H * T(0.716), c1 - r1 * 0.35, H * T(0.698), c1 + r1 * 0.4, H * T(0.712));
-    d += C(c1 + r1 * 0.95, H * T(0.722), c1 + r1 * 1.15, H * T(0.748), c1 + r1 * 1.05, H * T(0.775));
-    d += C(c1 + r1 * 1.5, H * T(0.83), (c1 + c2) / 2, H * 0.9, c2 - hwB[0] * 1.05, H * 0.925);
+    d += C(c2 - sp * 0.8, Y(0.98), c1 - e * 0.8, Y(0.92), c1 - e, Y(T(0.86)));
+    d += C(c1 - e - r1 * 0.2, Y(T(0.815)), c1 - r1 * 1.5, Y(T(0.79)), c1 - r1 * 1.45, Y(T(0.765)));
+    d += C(c1 - r1 * 1.3, Y(T(0.716)), c1 - r1 * 0.35, Y(T(0.698)), c1 + r1 * 0.4, Y(T(0.712)));
+    d += C(c1 + r1 * 0.95, Y(T(0.722)), c1 + r1 * 1.15, Y(T(0.748)), c1 + r1 * 1.05, Y(T(0.775)));
+    d += C(c1 + r1 * 1.5, Y(T(0.83)), (c1 + c2) / 2, Y(0.9), c2 - hwB[0] * 1.05, Y(0.925));
     // index → pinky, webbed together
     for (let i = 0; i < 4; i++) {
       const x = FING[i], hb = hwB[i], ht = hwT[i], top = TOPS[i];
       const tipBase = top + ht;
-      d += C(x - hb, H * T(0.8), x - ht, top + H * 0.16 * st, x - ht, tipBase); // left edge up
+      d += C(x - hb, Y(T(0.8)), x - ht, top + He * 0.16 * st, x - ht, tipBase); // left edge up
       d += C(x - ht, tipBase - k * ht, x - k * ht, top, x, top);                // rounded tip
       d += C(x + k * ht, top, x + ht, tipBase - k * ht, x + ht, tipBase);
       if (i < 3) {
         const nx = FING[i + 1], nhb = hwB[i + 1], vc = (x + nx) / 2, v = vy[i];
-        d += C(x + ht, top + H * 0.16 * st, x + hb, v - H * 0.1, x + hb * 1.02, v - H * 0.035);
-        d += C(x + hb * 1.3, v + H * 0.005, vc - fw * 0.5, v + H * 0.012, vc, v + H * 0.012);
-        d += C(vc + fw * 0.5, v + H * 0.012, nx - nhb * 1.3, v + H * 0.005, nx - nhb * 1.02, v - H * 0.035);
+        d += C(x + ht, top + He * 0.16 * st, x + hb, v - He * 0.1, x + hb * 1.02, v - He * 0.035);
+        d += C(x + hb * 1.3, v + He * 0.005, vc - fw * 0.5, v + He * 0.012, vc, v + He * 0.012);
+        d += C(vc + fw * 0.5, v + He * 0.012, nx - nhb * 1.3, v + He * 0.005, nx - nhb * 1.02, v - He * 0.035);
       } else {
-        d += C(x + ht, top + H * 0.16 * st, x + hb, H * T(0.84), x + hb * 1.02, H * 0.875);
+        d += C(x + ht, top + He * 0.16 * st, x + hb, Y(T(0.84)), x + hb * 1.02, Y(0.875));
       }
     }
     // outer palm right, down to the wrist
-    d += C(c5 + e, H * 0.91, c5 + e * 1.05, H * 0.95, c5 + e * 0.85, H * 0.985);
-    d += C(c5 + e * 0.6, H * 1.02, wristR, H * 1.045, wristR - e * 0.2, yB);
+    d += C(c5 + e, Y(0.91), c5 + e * 1.05, Y(0.95), c5 + e * 0.85, Y(0.985));
+    d += C(c5 + e * 0.6, Y(1.02), wristR, Y(1.045), wristR - e * 0.2, yB);
     d += " L " + n(wristL + sp * 0.06) + " " + n(yB);
-    d += C(wristL + sp * 0.02, H * 1.058, wristL, H * 1.05, wristL, H * 1.04) + " Z";
+    d += C(wristL + sp * 0.02, Y(1.058), wristL, Y(1.05), wristL, Y(1.04)) + " Z";
 
     // knuckle creases + thumb joint + palm line
     let cr = "";
     for (let i = 0; i < 4; i++) {
-      const x = FING[i], ht = hwT[i], cy = TOPS[i] + H * 0.15;
-      cr += "M " + n(x - ht * 0.7) + " " + n(cy) + " Q " + n(x) + " " + n(cy + H * 0.018) + " " + n(x + ht * 0.7) + " " + n(cy) + " ";
+      const x = FING[i], ht = hwT[i], cy = TOPS[i] + He * 0.15;
+      cr += "M " + n(x - ht * 0.7) + " " + n(cy) + " Q " + n(x) + " " + n(cy + He * 0.018) + " " + n(x + ht * 0.7) + " " + n(cy) + " ";
     }
-    cr += "M " + n(c1 - r1 * 0.5) + " " + n(H * T(0.82)) + " Q " + n(c1 + r1 * 0.4) + " " + n(H * T(0.838)) + " " + n(c1 + r1 * 0.9) + " " + n(H * T(0.82)) + " ";
-    cr += "M " + n(c2) + " " + n(H * 0.962) + " Q " + n((c2 + c4) / 2) + " " + n(H * 1.002) + " " + n(c4 + hwB[2]) + " " + n(H * 0.965);
+    cr += "M " + n(c1 - r1 * 0.5) + " " + n(Y(T(0.82))) + " Q " + n(c1 + r1 * 0.4) + " " + n(Y(T(0.838))) + " " + n(c1 + r1 * 0.9) + " " + n(Y(T(0.82))) + " ";
+    cr += "M " + n(c2) + " " + n(Y(0.962)) + " Q " + n((c2 + c4) / 2) + " " + n(Y(1.002)) + " " + n(c4 + hwB[2]) + " " + n(Y(0.965));
 
     // sleeve cuff across the wrist
-    const cf = "M " + n(wristL - sp * 0.04) + " " + n(H * 1.012)
-      + C((wristL + wristR) / 2 - sp * 0.2, H * 1.048, (wristL + wristR) / 2 + sp * 0.2, H * 1.048, wristR + e * 0.1, H * 1.012)
+    const cf = "M " + n(wristL - sp * 0.04) + " " + n(Y(1.012))
+      + C((wristL + wristR) / 2 - sp * 0.2, Y(1.048), (wristL + wristR) / 2 + sp * 0.2, Y(1.048), wristR + e * 0.1, Y(1.012))
       + " L " + n(wristR - e * 0.2) + " " + n(yB)
       + " L " + n(wristL + sp * 0.06) + " " + n(yB) + " Z";
 
@@ -125,7 +134,7 @@
     const hl = {};
     {
       // thumb: a tilted blob over the thumb artwork
-      const cy = H * T(0.745);
+      const cy = Y(T(0.745));
       hl[1] = "M " + n(c1 - r1 * 1.35) + " " + n(cy + r1 * 0.3)
         + C(c1 - r1 * 1.45, cy - r1 * 0.75, c1 - r1 * 0.5, cy - r1 * 1.25, c1 + r1 * 0.35, cy - r1 * 0.85)
         + C(c1 + r1 * 1.15, cy - r1 * 0.45, c1 + r1 * 1.35, cy + r1 * 0.55, c1 + r1 * 0.75, cy + r1 * 1.05)
@@ -133,13 +142,13 @@
     }
     for (let i = 0; i < 4; i++) {
       const x = FING[i], hb = hwB[i], ht = hwT[i], top = TOPS[i];
-      const tipBase = top + ht, base = H * 0.915;
+      const tipBase = top + ht, base = Y(0.915);
       hl[i + 2] = "M " + n(x - hb) + " " + n(base)
-        + C(x - hb, H * T(0.8), x - ht, top + H * 0.16 * st, x - ht, tipBase)
+        + C(x - hb, Y(T(0.8)), x - ht, top + He * 0.16 * st, x - ht, tipBase)
         + C(x - ht, tipBase - k * ht, x - k * ht, top, x, top)
         + C(x + k * ht, top, x + ht, tipBase - k * ht, x + ht, tipBase)
-        + C(x + ht, top + H * 0.16 * st, x + hb, H * T(0.8), x + hb, base)
-        + C(x + hb * 0.6, base + H * 0.03, x - hb * 0.6, base + H * 0.03, x - hb, base) + " Z";
+        + C(x + ht, top + He * 0.16 * st, x + hb, Y(T(0.8)), x + hb, base)
+        + C(x + hb * 0.6, base + He * 0.03, x - hb * 0.6, base + He * 0.03, x - hb, base) + " Z";
     }
 
     return { d, cr, cf, hl };
@@ -305,18 +314,22 @@
         this.overlay.appendChild(svg);
       }
 
-      // Badges ride the fingertips, so raise them by the same stretch factor.
+      // Badges ride the fingertips — same bottom-anchored, stretched math
+      // as the silhouette so they stay on the finger pads.
       const keyW = (placed[0].r.widthPct / 100) * W;
-      const st = stretchFor(keyW, H);
+      const He = handHeight(keyW, H);
+      const st = stretchFor(keyW, He);
       placed.forEach(({ midi, finger, r }) => {
         const cxPct = r.leftPct + r.widthPct / 2;
-        const wPx = Math.min((r.widthPct / 100) * W * 0.52, H * 0.115, 30);
+        const wPx = Math.min((r.widthPct / 100) * W * 0.52, He * 0.115, 30);
+        const tf = 1 - (1 - TIP[finger]) * st;         // stretched artwork fraction
+        const topPx = H - He * (1 - tf);               // bottom-anchored
         const tip = document.createElement("div");
         tip.className = "hand-tip";
         tip.textContent = finger;
         tip.style.left = cxPct + "%";
         tip.style.width = wPx + "px";
-        tip.style.top = (1 - (1 - TIP[finger]) * st) * 100 + "%";
+        tip.style.top = (topPx / H) * 100 + "%";
         this.overlay.appendChild(tip);
         this.byMidi.set(midi, tip);
       });
