@@ -2,7 +2,18 @@
 
 _Updated: 2026-07-07_
 
-## Latest — v1.8.8 (sw cache v41): realistic hands
+## Latest — v1.8.9 (sw cache v42): the hand is ONE continuous silhouette
+Joe rejected v1.8.8 ("wood log with 4 pegs, thumb like a straight stick"). `buildHand()`
+now emits a single unified hand outline: fingers grow out of the hand through smooth
+gap-proportional web valleys on an arched knuckle line (no flat deck between fingers),
+staggered finger lengths, bent angled thumb with rotated nail, pinky edge flowing straight
+into the palm/wrist, nails + knuckle/palm creases + metacarpal hints, one soft vertical
+skin gradient (per-part gradients were the "turned wood" look). Hand may run ~12% taller
+than the keyboard strip (palm hangs below, like the typing.com reference; SVG gets -15%
+top headroom so stretched tips don't clip). Verified: mobile + tablet, lesson highlight
+follow, L/R Free Play, two-hand d4 song, toggle, 0 console errors.
+
+## Previous — v1.8.8 (sw cache v41): realistic hands (rejected)
 Joe: the old hand overlay looked like a "scary" lumpy blob. **Rewrote `static/js/hands.js`
 rendering** from one flat outline path into separately-shaded parts: a palm plus five
 rounded, tapered finger **capsules**, each with a per-finger cylindrical skin gradient
