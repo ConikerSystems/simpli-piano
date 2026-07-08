@@ -144,33 +144,38 @@
     // finger; a real thumb has a wide base, an outer knuckle bulge, a hook,
     // and a broad rounded pad. Tip pad sits on the c1 key. ----
     const thumb = (() => {
-      // Long diagonal digit: root deep in the palm (near the index/wrist) →
-      // fat rounded pad on the c1 key, with an outer knuckle bulge and a bend.
-      const bx = X(25.5), by = ys(100), tx = c1, ty = ys(81);
-      const dxv = tx - bx, dyv = ty - by, len = Math.hypot(dxv, dyv) || 1;
-      const ux = dxv / len, uy = dyv / len, px = -uy, py = ux;
-      const off = (x, y, s) => [x + px * s, y + py * s];
-      const along = (x, y, s) => [x + ux * s, y + uy * s];
-      const wBase = 6.0 * u, wKnuck = 6.5 * u, wPad = 4.7 * u;
-      const kx = bx + dxv * 0.36, ky = by + dyv * 0.36;      // knuckle (MCP) point
-      const baseO = off(bx, by, -wBase), baseI = off(bx, by, wBase);
-      const kO = off(kx, ky, -wKnuck), kI = off(kx, ky, wBase * 0.92);
-      const padO = off(tx, ty, -wPad), padI = off(tx, ty, wPad);
-      const apex = along(tx, ty, wPad * 1.18);
+      // TWO-segment bent digit: a long shaft from deep in the palm up to the
+      // MCP knuckle, then a shorter distal segment hooking to the fat pad on
+      // the c1 key. The knuckle is offset OUTWARD from the straight base→tip
+      // line, so the thumb has a real bend (not just a width bulge).
+      const B = [X(26), ys(101)];    // root, deep in the palm
+      const K = [X(13), ys(89)];     // MCP knuckle — bowed outward (left)
+      const T = [c1 + 0.6 * u, ys(80.5)]; // pad centre, on the c1 key
+      const seg = (a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy) || 1;
+        return { ux: dx / L, uy: dy / L, px: -dy / L, py: dx / L, L }; };
+      const s1 = seg(B, K), s2 = seg(K, T);
+      let bpx = s1.px + s2.px, bpy = s1.py + s2.py;      // bisector perpendicular at the knuckle
+      const bl = Math.hypot(bpx, bpy) || 1; bpx /= bl; bpy /= bl;
+      const wBase = 5.2 * u, wMid = 5.6 * u, wPad = 4.5 * u;
+      const off = (pt, px, py, s) => [pt[0] + px * s, pt[1] + py * s];
+      const baseO = off(B, s1.px, s1.py, -wBase), baseI = off(B, s1.px, s1.py, wBase);
+      const kO = off(K, bpx, bpy, -wMid), kI = off(K, bpx, bpy, wMid);
+      const padO = off(T, s2.px, s2.py, -wPad), padI = off(T, s2.px, s2.py, wPad);
+      const apex = off(T, s2.ux, s2.uy, wPad * 1.15);
       const closed = "M " + Pt(baseO)
-        + Cp([baseO[0] + ux * len * 0.1, baseO[1] + uy * len * 0.1], along(kO[0], kO[1], -len * 0.1), kO)      // outer, bulging knuckle
-        + Cp(along(kO[0], kO[1], len * 0.14), [padO[0] - ux * len * 0.14, padO[1] - uy * len * 0.14], padO)    // up to pad outer
-        + Cp(along(padO[0], padO[1], wPad * 0.55), [apex[0] - px * wPad * 0.5, apex[1] - py * wPad * 0.5], apex)  // round the pad
-        + Cp([apex[0] + px * wPad * 0.5, apex[1] + py * wPad * 0.5], along(padI[0], padI[1], wPad * 0.55), padI)
-        + Cp([padI[0] - ux * len * 0.18, padI[1] - uy * len * 0.18], along(kI[0], kI[1], len * 0.16), kI)      // inner edge down
-        + Cp(along(kI[0], kI[1], -len * 0.12), [baseI[0] + ux * len * 0.1, baseI[1] + uy * len * 0.1], baseI)  // into the palm
+        + Cp(off(baseO, s1.ux, s1.uy, s1.L * 0.42), off(kO, s1.ux, s1.uy, -s1.L * 0.14), kO)       // outer shaft up to knuckle
+        + Cp(off(kO, s2.ux, s2.uy, s2.L * 0.22), off(padO, s2.ux, s2.uy, -s2.L * 0.26), padO)      // outer distal to pad
+        + Cp(off(padO, s2.ux, s2.uy, wPad * 0.6), off(apex, s2.px, s2.py, -wPad * 0.5), apex)      // round the pad
+        + Cp(off(apex, s2.px, s2.py, wPad * 0.5), off(padI, s2.ux, s2.uy, wPad * 0.6), padI)
+        + Cp(off(padI, s2.ux, s2.uy, -s2.L * 0.26), off(kI, s2.ux, s2.uy, s2.L * 0.22), kI)        // inner distal down
+        + Cp(off(kI, s1.ux, s1.uy, -s1.L * 0.14), off(baseI, s1.ux, s1.uy, s1.L * 0.42), baseI)    // inner shaft into palm
         + " Z";
-      const nc = along(tx, ty, wPad * 0.05);
+      const nc = off(T, s2.ux, s2.uy, wPad * 0.05);
       const nail = { cx: nc[0], cy: nc[1], rx: wPad * 0.5, ry: wPad * 0.72,
-        rot: Math.atan2(uy, ux) * 180 / Math.PI + 90 };
-      const jm = [bx + dxv * 0.52, by + dyv * 0.52];
-      const creases = "M " + Pt(off(jm[0], jm[1], -wKnuck * 0.55)) + " Q " + P(jm[0] + ux * 2, jm[1] + uy * 2)
-        + " " + Pt(off(jm[0], jm[1], wBase * 0.5)) + " ";
+        rot: Math.atan2(s2.uy, s2.ux) * 180 / Math.PI + 90 };
+      // knuckle crease across the bend
+      const creases = "M " + Pt(off(K, bpx, bpy, -wMid * 0.62)) + " Q " + P(K[0] + s2.ux * 2, K[1] + s2.uy * 2)
+        + " " + Pt(off(K, bpx, bpy, wMid * 0.62)) + " ";
       return { closed, nail, creases };
     })();
 
@@ -188,9 +193,10 @@
         d += C(vx + (b[0] - vx) * 0.35, valleyY, b[0] - (b[0] - vx) * 0.5, b[1] + (valleyY - b[1]) * 1.3, b[0], b[1]);
       }
     }
-    // pinky-side palm edge down to the wrist, then the forearm off the bottom
-    d += Cp([c5 + 3.6 * u, ys(92)], [c5 + 5.2 * u, ys(95.5)], [c5 + 4.8 * u, ys(100)]);
-    d += Cp([c5 + 4.4 * u, ys(103)], [c5 + 3.2 * u, ys(105)], [wristR, ys(106)]);
+    // pinky-side palm edge — taper smoothly inward to the wrist (no outward
+    // bulge, which read as a lump/growth below the pinky)
+    d += Cp([c5 + 4.7 * u, ys(93)], [c5 + 4.3 * u, ys(98)], [c5 + 3.7 * u, ys(102)]);
+    d += Cp([c5 + 3.1 * u, ys(104.5)], [wristR + 0.4 * u, ys(105.6)], [wristR, ys(106)]);
     d += C(wristR - 0.4 * u, ys(112), wristR - 1.2 * u, ys(118), wristR - 1.6 * u, ys(126));
     d += " L " + P(wristL + 1.6 * u, ys(126));
     d += C(wristL + 1.2 * u, ys(118), wristL + 0.4 * u, ys(112), wristL, ys(106));

@@ -2,7 +2,18 @@
 
 _Updated: 2026-07-07_
 
-## Latest — v1.8.14 (sw cache v47): real bent thumb + taller keys
+## Latest — v1.8.15 (sw cache v48): thumb bend + remove pinky lump
+Joe: "the thumb needs a bend; there's a bump after the pinky that looks like a growth."
+In [hands.js](static/js/hands.js) `buildHand()`: (1) Thumb rebuilt as a TWO-SEGMENT bent
+digit — a long shaft from deep in the palm to the MCP knuckle (bowed OUTWARD off the
+straight base→tip line, `K = [X(13), ys(89)]`), then a shorter distal segment hooking to
+the fat pad on c1. Edges follow each segment's own axis with a bisector perpendicular at
+the knuckle → a real bend, not just a width bulge. (2) Pinky-side palm edge retuned to
+taper smoothly inward to the wrist (was `c5+5.2u` bulge → now monotonic c5+4.7→3.7→wrist),
+removing the lump below finger 5. Verified preview (tablet): bend visible, no lump, glow
+follows thumb→C / pinky→G, zero console errors. Default-OFF, labeled 🖐 Hands.
+
+## Prev — v1.8.14 (sw cache v47): real bent thumb + taller keys
 Joe: "thumb doesn't look like a thumb, pinky is weird, and make the course keys taller with
 the hand over the key." Fixes in [hands.js](static/js/hands.js) `buildHand()`:
 (1) Thumb is now a DEDICATED long diagonal digit (its own `dThumb` path drawn over the palm)
