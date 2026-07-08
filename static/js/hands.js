@@ -31,7 +31,7 @@
   const { isWhite } = window.Theory;
 
   // Badge tops (fraction of hand height) — sit on each finger's pad.
-  const TIP = { 1: 0.70, 2: 0.48, 3: 0.43, 4: 0.465, 5: 0.61 };
+  const TIP = { 1: 0.70, 2: 0.50, 3: 0.42, 4: 0.46, 5: 0.61 };
 
   // Semi-transparent skin palette (keys read through the hand).
   const A = 0.78;
@@ -123,9 +123,14 @@
     // Knuckles fan toward the palm centre; tips stay on their key centres.
     const pcx = (c2 + c5) / 2 - 0.04 * (c5 - c2);
     const FC = [c2, c3, c4, c5];
-    const TIPY = [48, 43, 46.5, 59];               // pinky a bit longer than before
-    const HWT = [5.2, 5.5, 5.0, 4.2].map((v) => v * u); // pinky a bit wider
-    const HWB = HWT.map((v) => v * 1.28);
+    // Distinct natural lengths (lower y = taller): middle longest, then ring,
+    // then index, pinky clearly shortest.
+    const TIPY = [49, 41, 45, 61];
+    const HWT = [5.2, 5.5, 5.0, 4.1].map((v) => v * u);
+    // Base a bit wider than the tip (knuckle), but the PINKY barely so — its
+    // outer base is exposed (no finger to its right) and a wide base read as a
+    // lump/growth beside finger 5.
+    const HWB = HWT.map((v, i) => v * (i === 3 ? 1.04 : 1.28));
     const baseY = ys(89), valleyY = ys(91.2);
     const digits = [];
     for (let i = 0; i < 4; i++) {
@@ -193,10 +198,11 @@
         d += C(vx + (b[0] - vx) * 0.35, valleyY, b[0] - (b[0] - vx) * 0.5, b[1] + (valleyY - b[1]) * 1.3, b[0], b[1]);
       }
     }
-    // pinky-side palm edge — taper smoothly inward to the wrist (no outward
-    // bulge, which read as a lump/growth below the pinky)
-    d += Cp([c5 + 4.7 * u, ys(93)], [c5 + 4.3 * u, ys(98)], [c5 + 3.7 * u, ys(102)]);
-    d += Cp([c5 + 3.1 * u, ys(104.5)], [wristR + 0.4 * u, ys(105.6)], [wristR, ys(106)]);
+    // pinky-side palm edge — continue the pinky's outer edge straight down and
+    // inward to the wrist (monotonic, never wider than the pinky base, so there
+    // is no lobe/growth beside finger 5)
+    d += Cp([c5 + 4.0 * u, ys(94)], [c5 + 3.8 * u, ys(99)], [c5 + 3.3 * u, ys(103)]);
+    d += Cp([c5 + 2.8 * u, ys(105)], [wristR + 0.3 * u, ys(105.7)], [wristR, ys(106)]);
     d += C(wristR - 0.4 * u, ys(112), wristR - 1.2 * u, ys(118), wristR - 1.6 * u, ys(126));
     d += " L " + P(wristL + 1.6 * u, ys(126));
     d += C(wristL + 1.2 * u, ys(118), wristL + 0.4 * u, ys(112), wristL, ys(106));

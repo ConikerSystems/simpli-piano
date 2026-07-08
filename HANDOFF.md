@@ -2,7 +2,18 @@
 
 _Updated: 2026-07-07_
 
-## Latest — v1.8.15 (sw cache v48): thumb bend + remove pinky lump
+## Latest — v1.8.16 (sw cache v49): staggered finger lengths + kill pinky lobe
+Joe: "still a bump/growth to the right of finger 5; fingers 2/3/4 should be different
+lengths." In [hands.js](static/js/hands.js) `buildHand()`: (1) `TIPY = [49,41,45,61]` gives
+clearly distinct lengths — middle longest, ring, index, pinky shortest (was near-equal).
+(2) The lobe beside the pinky was its OUTER base knuckle (exposed, no finger to its right):
+pinky base multiplier dropped to 1.04 (others 1.28) and the pinky-side palm edge now
+continues the pinky's outer edge straight/monotonically inward to the wrist (no c5+5.2u
+bulge). Badge TIP fractions retuned {2:.50,3:.42,4:.46}. Verified preview (tablet): distinct
+finger lengths, clean ulnar edge, thumb bend intact, glow follows thumb→C / pinky→G, zero
+console errors. Default-OFF, 🖐 Hands.
+
+## Prev — v1.8.15 (sw cache v48): thumb bend + remove pinky lump
 Joe: "the thumb needs a bend; there's a bump after the pinky that looks like a growth."
 In [hands.js](static/js/hands.js) `buildHand()`: (1) Thumb rebuilt as a TWO-SEGMENT bent
 digit — a long shaft from deep in the palm to the MCP knuckle (bowed OUTWARD off the
