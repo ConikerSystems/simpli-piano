@@ -142,7 +142,11 @@
       digits.push(digit(bx, baseY, fcx, ys(TIPY[i] + 4), HWB[i], HWT[i], bend));
     }
 
-    const wristL = X(21), wristR = c5 + 2.0 * u;
+    // The pinky's knuckles fan toward the palm centre, so its base sits LEFT of
+    // its tip. The hand's outer edge below the pinky must follow THAT base, not
+    // c5 — anchoring to it kills the lobe that read as a stubbed 6th finger.
+    const pbr = digits[3].baseR;                 // pinky base, outer (right) corner
+    const wristL = X(21), wristR = Math.min(c5 + 2.0 * u, pbr[0] - 2.5 * u);
 
     // ---- Thumb — a dedicated BENT digit with a fat pad, drawn as its own
     // piece over the lower-left palm. A symmetric capsule reads as a stubby
@@ -198,11 +202,10 @@
         d += C(vx + (b[0] - vx) * 0.35, valleyY, b[0] - (b[0] - vx) * 0.5, b[1] + (valleyY - b[1]) * 1.3, b[0], b[1]);
       }
     }
-    // pinky-side palm edge — continue the pinky's outer edge straight down and
-    // inward to the wrist (monotonic, never wider than the pinky base, so there
-    // is no lobe/growth beside finger 5)
-    d += Cp([c5 + 4.0 * u, ys(94)], [c5 + 3.8 * u, ys(99)], [c5 + 3.3 * u, ys(103)]);
-    d += Cp([c5 + 2.8 * u, ys(105)], [wristR + 0.3 * u, ys(105.7)], [wristR, ys(106)]);
+    // pinky-side palm edge — start at the pinky's actual base and move strictly
+    // LEFT+down to the wrist (never right of the base), so no lobe forms
+    d += Cp([pbr[0] - 0.2 * u, ys(94.5)], [pbr[0] - 1.2 * u, ys(100)], [pbr[0] - 2.2 * u, ys(104)]);
+    d += Cp([pbr[0] - 2.8 * u, ys(105.6)], [wristR, ys(105.9)], [wristR, ys(106)]);
     d += C(wristR - 0.4 * u, ys(112), wristR - 1.2 * u, ys(118), wristR - 1.6 * u, ys(126));
     d += " L " + P(wristL + 1.6 * u, ys(126));
     d += C(wristL + 1.2 * u, ys(118), wristL + 0.4 * u, ys(112), wristL, ys(106));

@@ -2,7 +2,17 @@
 
 _Updated: 2026-07-07_
 
-## Latest — v1.8.16 (sw cache v49): staggered finger lengths + kill pinky lobe
+## Latest — v1.8.17 (sw cache v50): finally kill the pinky lobe (anchor to real base)
+Joe (3rd report): "still a bump like a stubbed 6th finger to the right of the pinky." Root
+cause found: the pinky's knuckles fan toward the palm centre, so `digits[3].baseR` sits
+~2.8u LEFT of c5 — but the palm's right edge was drawn out at `c5+4u`, leaving a fat lobe
+of palm exposed to the pinky's right. Fix in [hands.js](static/js/hands.js): capture
+`pbr = digits[3].baseR`, set `wristR = min(c5+2u, pbr.x - 2.5u)`, and draw the pinky-side
+edge from `pbr` moving strictly LEFT+down (pbr-0.2u → -2.8u → wristR). No point ever goes
+right of the pinky base → no lobe. Verified preview (tablet): clean hypothenar edge, glow
+follows thumb→C / pinky→G, zero console errors. Default-OFF, 🖐 Hands.
+
+## Prev — v1.8.16 (sw cache v49): staggered finger lengths + kill pinky lobe
 Joe: "still a bump/growth to the right of finger 5; fingers 2/3/4 should be different
 lengths." In [hands.js](static/js/hands.js) `buildHand()`: (1) `TIPY = [49,41,45,61]` gives
 clearly distinct lengths — middle longest, ring, index, pinky shortest (was near-equal).
