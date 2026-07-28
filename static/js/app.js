@@ -292,6 +292,7 @@
         tile("⏱  Daily Workout", window.Workout.doneToday() ? "Done today ✓ — go again?" : "A quick session keeps the streak", () => workoutView()),
         tile("🎸  Chords", trackProgressText(window.Chords, "Play chords to accompany songs"), () => pathView(window.Chords, "Chords")),
         tile("🎵  Songs", window.Songs.all().filter((s) => !s.exercise).length + " songs to play", () => songList()),
+        tile("⭐  My Favorites", window.Songs.favorites().length + " picks — Sound of Silence, Coldplay & more", () => favoritesView()),
         tile("📖  Read Notes", "Practice + reading tests", () => readNotesMenu()),
         tile("🎹  Free Play", "Just play around", () => freePlay()),
       ]),
@@ -411,6 +412,68 @@
     const secs = Math.round((beats / song.tempo) * 60);
     return secs >= 60 ? Math.round(secs / 60) + " min" : secs + " sec";
   }
+  // A ♥ toggle for a song row. Tapping pins/unpins a PERSONAL favorite; curated
+  // (shared) favorites always show filled and stay put. `onChange` (optional)
+  // lets a view re-render after a toggle.
+  function favHeart(song, onChange) {
+    const draw = (h, on) => { h.textContent = on ? "♥" : "♡"; h.classList.toggle("on", on); };
+    const h = el("span", {
+      class: "fav-heart", title: "Add to My Favorites",
+      onclick: (e) => {
+        e.stopPropagation();
+        const now = window.Songs.toggleFavorite(song.id);
+        draw(h, now);
+        if (onChange) onChange(now);
+      },
+    });
+    draw(h, window.Songs.isFavorite(song.id));
+    return h;
+  }
+
+  // ---- My Favorites: a shared, curated list everyone sees, plus each
+  // player's own ♥ picks. "Suggest a song" emails a request via Feedback. -----
+  function favoritesView() {
+    clearView();
+    setChrome("⭐ My Favorites", { back: true });
+    backBtn.onclick = home;
+
+    const wrap = el("div", { class: "song-wrap" });
+    wrap.append(el("p", { class: "profiles-sub fav-intro" },
+      "Everyone who opens Simpli Piano sees these picks. Tap ♥ on any song to add your own — "
+      + "or suggest one for the shared list below."));
+
+    const genreLabel = (g) => (GENRES.find(([id]) => id === g) || [])[1] || "";
+    const render = () => {
+      const list = el("div", { class: "song-list" });
+      const favs = window.Songs.favorites();
+      if (!favs.length) {
+        list.append(el("div", { class: "coming-soon" }, "No favorites yet — tap ♥ on a song to add one."));
+      }
+      favs.forEach((song) => {
+        const sub = songDuration(song) + (song.genre ? "  ·  " + genreLabel(song.genre) : "")
+          + (song.hand === "right" ? "  ·  one hand" : song.hand === "both" ? "  ·  two hands" : "");
+        list.append(el("button", { class: "song-row", onclick: () => lesson(song.id) }, [
+          el("span", { class: "song-dot diff-" + song.difficulty }, "♪"),
+          el("span", { class: "song-meta" }, [
+            el("span", { class: "song-title" }, song.title),
+            el("span", { class: "song-sub" }, sub),
+          ]),
+          favHeart(song, () => render()),
+          el("span", { class: "song-stars" }, starRow(starsFor(song.id))),
+        ]));
+      });
+      const holder = wrap.querySelector(".fav-list-holder");
+      holder.innerHTML = "";
+      holder.append(list);
+    };
+
+    wrap.append(el("div", { class: "fav-list-holder" }));
+    wrap.append(el("button", { class: "chip play fav-suggest",
+      onclick: () => window.Feedback.open() },
+      "💌  Suggest a song for Favorites"));
+    view.append(wrap);
+    render();
+  }
   function songList(genre) {
     if (typeof genre !== "string") genre = "all"; // also used as a click handler
     clearView();
@@ -436,6 +499,7 @@
           el("span", { class: "song-title" }, song.title + (song.user ? "  ·  yours" : "")),
           el("span", { class: "song-sub" }, sub),
         ]),
+        favHeart(song),
         el("span", { class: "song-stars" }, starRow(stars)),
       ]);
     };
@@ -491,7 +555,9 @@
       modeBtn, el("label", { class: "tempo" }, [el("span", {}, "Tempo"), tempo, tempoVal]),
       fingersChip(() => hands, kbWrap), listenBtn, startBtn,
     ]);
-    view.append(el("div", { class: "lesson" }, [controls, progress, status, lane, kbWrap]));
+    // Optional "what to work on" line (favorites/pop excerpts set song.focus).
+    const focusEl = song.focus ? el("div", { class: "lesson-focus" }, "🎯  " + song.focus) : null;
+    view.append(el("div", { class: "lesson" }, [controls, focusEl, progress, status, lane, kbWrap]));
 
     const r = window.Songs.rangeOf(song.notes);
     const startC = r.lo - ((r.lo % 12 + 12) % 12);

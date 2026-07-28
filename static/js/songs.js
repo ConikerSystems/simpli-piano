@@ -92,10 +92,10 @@
     return { lo, hi };
   }
 
-  function makeSong({ id, title, difficulty = 1, tempo = 90, hand = "right", src, exercise = false, genre = "folk" }) {
+  function makeSong({ id, title, difficulty = 1, tempo = 90, hand = "right", src, exercise = false, genre = "folk", favorite = false, focus = null }) {
     const { notes, errors } = parseSong(src);
     if (errors.length) console.warn("Song", id, "has bad tokens:", errors);
-    return { id, title, difficulty, tempo, hand, notes, exercise, genre };
+    return { id, title, difficulty, tempo, hand, notes, exercise, genre, favorite, focus };
   }
 
   // ---- Built-in library ---------------------------------------------------
@@ -136,8 +136,47 @@
   function all() { return [...LIBRARY, ...loadUser()]; }
   function byId(id) { return all().find((s) => s.id === id) || null; }
 
+  // ---- Favorites --------------------------------------------------------
+  // Two layers:
+  //  1. Curated "My Favorites" — songs flagged `favorite:true` in the library.
+  //     These are baked into the app, so EVERY player sees the same starter
+  //     list (Joe's picks). To add to it for everyone, flag a song in the
+  //     library (or use the "Suggest a song" button, which emails a request).
+  //  2. Personal favorites — each player can ♥ any song; stored per-player in
+  //     localStorage so it never collides with another player's list.
+  const favKey = () => window.Profiles.key("piano.favorites");
+  function personalIds() {
+    try { return JSON.parse(localStorage.getItem(favKey())) || []; }
+    catch { return []; }
+  }
+  function isFavorite(id) {
+    const s = byId(id);
+    return !!(s && s.favorite) || personalIds().includes(id);
+  }
+  // Toggle a PERSONAL favorite. Curated favorites can't be un-favorited here
+  // (they belong to the shared list); toggling one just adds/removes a personal
+  // pin, which is a no-op for display. Returns the new isFavorite() state.
+  function toggleFavorite(id) {
+    const ids = personalIds();
+    const i = ids.indexOf(id);
+    if (i >= 0) ids.splice(i, 1); else ids.push(id);
+    localStorage.setItem(favKey(), JSON.stringify(ids));
+    return isFavorite(id);
+  }
+  // The favorites list a player sees: curated favorites first (in library
+  // order), then any personal picks that aren't already curated.
+  function favorites() {
+    const curated = all().filter((s) => s.favorite);
+    const curatedIds = new Set(curated.map((s) => s.id));
+    const personal = personalIds()
+      .filter((id) => !curatedIds.has(id))
+      .map(byId).filter(Boolean);
+    return [...curated, ...personal];
+  }
+
   window.Songs = {
     parseSong, serialize, rangeOf, LIBRARY,
     loadUser, saveUserSong, deleteUserSong, all, byId,
+    isFavorite, toggleFavorite, favorites,
   };
 })();
