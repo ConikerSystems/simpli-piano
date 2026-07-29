@@ -124,12 +124,44 @@ window.SongData = [
 
   // ============ Pop excerpts (difficulty 3) — short riffs to enjoy ============
   // Not public domain, so these are brief by-ear practice excerpts, kept
-  // separate from the teaching material.
+  // separate from the teaching material. A few are flagged `favorite: true`,
+  // which surfaces them in the "⭐ My Favorites" list on the home screen.
+  // `focus` = a one-line "what to work on" shown at the top of the lesson.
+  // These pop excerpts are short OPENINGS meant for practising mechanics, not
+  // full performances — right-hand only unless noted, taken slowly.
+
+  // --- Sound of Silence: the SAME opening melody for both the Simon &
+  // Garfunkel original and the Disturbed cover — Disturbed just plays it lower
+  // and heavier, so the notes/fingering you learn here work for both. ---
+  { id: "sound-of-silence", title: "The Sound of Silence — Opening", difficulty: 3, tempo: 92, genre: "pop",
+    hand: "right", favorite: true,
+    focus: "Right hand only. Same melody for Simon & Garfunkel AND the Disturbed cover — it climbs a D-minor chord (D → F → A). Take it slow and smooth.",
+    src: "D4e D4e F4e F4e A4e A4e G4h | F4e F4e A4e A4e A4e G4e F4e D4h" },
+
   { id: "clocks-riff", title: "Clocks (Coldplay) — Opening Riff", difficulty: 3, tempo: 130, genre: "pop",
+    hand: "right", favorite: true,
+    focus: "Right hand only. A rolling three-note pattern — keep it even and light. This is the whole hook of the song.",
     src: "C5e G4e E4e C5e G4e E4e C5e G4e | Bb4e G4e D4e Bb4e G4e D4e Bb4e G4e | "
        + "A4e F4e D4e A4e F4e D4e A4e F4e | A4e F4e D4e A4e F4e D4e A4e F4e | "
        + "C5e G4e E4e C5e G4e E4e C5e G4e | Bb4e G4e D4e Bb4e G4e D4e Bb4e G4e | "
        + "A4e F4e D4e A4e F4e D4e A4e F4e | A4e F4e D4e A4e F4e D4e A4e F4e | C4+E4+G4w" },
+
+  { id: "yellow-intro", title: "Yellow (Coldplay) — Opening", difficulty: 3, tempo: 90, genre: "pop",
+    hand: "right", favorite: true,
+    focus: "Right hand only. The “Look at the stars…” vocal line, simplified. Gentle and singing — one note per syllable.",
+    src: "G4e G4e G4e G4q | G4e A4e G4e E4e D4h | C4e D4e E4e E4e D4e C4h" },
+
+  { id: "viva-la-vida", title: "Viva la Vida (Coldplay) — Theme", difficulty: 3, tempo: 100, genre: "pop",
+    hand: "right", favorite: true,
+    focus: "Right hand only. The main string-riff theme, stepping up and back down. Keep a steady march pulse.",
+    src: "G4e A4e G4e F4e E4e F4e G4h | A4e G4e F4e E4e D4e C4e D4h | "
+       + "E4e F4e G4e G4e F4e E4e D4h | E4e F4e G4e A4e G4e F4e E4h" },
+
+  { id: "the-scientist", title: "The Scientist (Coldplay) — Opening", difficulty: 3, tempo: 90, genre: "pop",
+    hand: "right", favorite: true,
+    focus: "Right hand only. The “Come up to meet you…” vocal line. Land softly on the held notes.",
+    src: "F4e F4e F4e F4e | F4e G4e A4h | A4e A4e G4e F4e F4e E4e F4h" },
+
   { id: "country-roads", title: "Country Roads (John Denver) — Chorus", difficulty: 3, tempo: 100, genre: "pop",
     src: "G4 A4 C5h. C5 A4 G4h. | G4 A4 G4 E4 D4 C4h. | "
        + "E4 G4 A4 A4 G4 E4 G4 G4h | C5 A4 G4h E4 D4 C4w" },
