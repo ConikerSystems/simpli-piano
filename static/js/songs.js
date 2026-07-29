@@ -92,10 +92,17 @@
     return { lo, hi };
   }
 
-  function makeSong({ id, title, difficulty = 1, tempo = 90, hand = "right", src, exercise = false, genre = "folk", favorite = false, focus = null }) {
+  function makeSong({ id, title, difficulty = 1, tempo = 90, hand = "right", src, exercise = false, genre = "folk", favorite = false, focus = null, reps = 1 }) {
     const { notes, errors } = parseSong(src);
     if (errors.length) console.warn("Song", id, "has bad tokens:", errors);
-    return { id, title, difficulty, tempo, hand, notes, exercise, genre, favorite, focus };
+    // `reps` loops the written phrase N times — used to stretch a short opening
+    // into a proper ~30-second practice run without retyping the notes.
+    let full = notes;
+    if (reps > 1) {
+      full = [];
+      for (let i = 0; i < reps; i++) full = full.concat(notes.map((n) => ({ ...n })));
+    }
+    return { id, title, difficulty, tempo, hand, notes: full, exercise, genre, favorite, focus };
   }
 
   // ---- Built-in library ---------------------------------------------------
