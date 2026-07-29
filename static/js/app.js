@@ -538,7 +538,7 @@
     const modeHint = (m) => (m === "step"
       ? "Practice — play the glowing key when you're ready, no rush."
       : "Play in time — the notes fall to a beat. Use Tempo to slow it down.");
-    const status = el("div", { class: "lesson-status" }, "Tap Start to begin");
+    const status = el("div", { class: "lesson-status" }, "Play the glowing key to begin — or tap ▶ Start");
     const lane = el("div", { class: "lane" });
     const kbEl = el("div", {});
     const kbWrap = el("div", { class: "kb-wrap" }, kbEl);
@@ -575,9 +575,18 @@
       onComplete: (res) => finish(res),
     });
     window._active = engine;
-    kb.onPress = (m) => engine.input(m);
+    // In Practice (step) mode the lesson waits patiently for input, but the
+    // engine ignores notes until it's "running" — so a learner who taps the
+    // glowing key (or plays into the mic) before pressing Start sees nothing
+    // happen. Auto-start on the first note so playing just works. Moving mode
+    // still needs Start (it has a metronome/count-in clock).
+    const play = (m) => {
+      if (!engine.running && mode === "step") begin();
+      engine.input(m);
+    };
+    kb.onPress = play;
     // Route the (persistent) mic to this lesson; grade by note name while it's on.
-    window._micTarget = (m) => engine.input(m);
+    window._micTarget = play;
     engine.setOctaveTolerant(!!window._mic);
 
     function toggleMode() {
