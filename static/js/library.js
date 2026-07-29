@@ -133,32 +133,32 @@ window.SongData = [
   // --- Sound of Silence: the SAME opening melody for both the Simon &
   // Garfunkel original and the Disturbed cover — Disturbed just plays it lower
   // and heavier, so the notes/fingering you learn here work for both. ---
-  { id: "sound-of-silence", title: "The Sound of Silence — Opening", difficulty: 3, tempo: 92, genre: "pop",
-    hand: "right", favorite: true, reps: 4,
+  { id: "sound-of-silence", title: "The Sound of Silence — Opening", difficulty: 3, tempo: 60, genre: "pop",
+    hand: "right", favorite: true, reps: 3,
     focus: "RIGHT hand. Same melody for Simon & Garfunkel AND the Disturbed cover. It climbs a D-minor chord — thumb on D, then reach up to F and A (the top note). The phrase loops so you can drill it. Slow and smooth.",
     src: "D4e D4e F4e F4e A4e A4e G4h | F4e F4e A4e A4e A4e G4e F4e D4h" },
 
-  { id: "clocks-riff", title: "Clocks (Coldplay) — Opening Riff", difficulty: 3, tempo: 130, genre: "pop",
-    hand: "right", favorite: true, reps: 2,
+  { id: "clocks-riff", title: "Clocks (Coldplay) — Opening Riff", difficulty: 3, tempo: 75, genre: "pop",
+    hand: "right", favorite: true, reps: 1,
     focus: "RIGHT hand. A rolling three-note pattern — keep it even and light. This is the whole hook of the song; it loops so you can lock in the groove.",
     src: "C5e G4e E4e C5e G4e E4e C5e G4e | Bb4e G4e D4e Bb4e G4e D4e Bb4e G4e | "
        + "A4e F4e D4e A4e F4e D4e A4e F4e | A4e F4e D4e A4e F4e D4e A4e F4e | "
        + "C5e G4e E4e C5e G4e E4e C5e G4e | Bb4e G4e D4e Bb4e G4e D4e Bb4e G4e | "
        + "A4e F4e D4e A4e F4e D4e A4e F4e | A4e F4e D4e A4e F4e D4e A4e F4e | C4+E4+G4w" },
 
-  { id: "yellow-intro", title: "Yellow (Coldplay) — Opening", difficulty: 3, tempo: 90, genre: "pop",
-    hand: "right", favorite: true, reps: 4,
+  { id: "yellow-intro", title: "Yellow (Coldplay) — Opening", difficulty: 3, tempo: 60, genre: "pop",
+    hand: "right", favorite: true, reps: 3,
     focus: "RIGHT hand. The “Look at the stars…” vocal line, simplified. Gentle and singing — one note per syllable. Loops for practice.",
     src: "G4e G4e G4e G4q | G4e A4e G4e E4e D4h | C4e D4e E4e E4e D4e C4h" },
 
-  { id: "viva-la-vida", title: "Viva la Vida (Coldplay) — Theme", difficulty: 3, tempo: 100, genre: "pop",
-    hand: "right", favorite: true, reps: 3,
+  { id: "viva-la-vida", title: "Viva la Vida (Coldplay) — Theme", difficulty: 3, tempo: 72, genre: "pop",
+    hand: "right", favorite: true, reps: 2,
     focus: "RIGHT hand. The main string-riff theme, stepping up and back down. Keep a steady march pulse. Loops for practice.",
     src: "G4e A4e G4e F4e E4e F4e G4h | A4e G4e F4e E4e D4e C4e D4h | "
        + "E4e F4e G4e G4e F4e E4e D4h | E4e F4e G4e A4e G4e F4e E4h" },
 
-  { id: "the-scientist", title: "The Scientist (Coldplay) — Opening", difficulty: 3, tempo: 90, genre: "pop",
-    hand: "right", favorite: true, reps: 4,
+  { id: "the-scientist", title: "The Scientist (Coldplay) — Opening", difficulty: 3, tempo: 60, genre: "pop",
+    hand: "right", favorite: true, reps: 3,
     focus: "RIGHT hand. The “Come up to meet you…” vocal line. Land softly on the held notes. Loops for practice.",
     src: "F4e F4e F4e F4e | F4e G4e A4h | A4e A4e G4e F4e F4e E4e F4h" },
 
