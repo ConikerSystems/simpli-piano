@@ -9,6 +9,17 @@
   let master = null;
   const voices = new Map(); // midi -> { osc1, osc2, gain }
 
+  // Pitch classes the synth sounded recently (pc -> last performance.now()).
+  // The mic runs with echoCancellation OFF (for pitch accuracy), so it hears
+  // the app's own speaker; isEcho() lets the mic wiring drop those detections
+  // instead of grading them as the learner's (wrong) input.
+  const recentPC = new Map();
+  const pc = (m) => ((m % 12) + 12) % 12;
+  function isEcho(midi, withinMs = 2500) {
+    const t = recentPC.get(pc(midi));
+    return t !== undefined && performance.now() - t < withinMs;
+  }
+
   const midiToFreq = (m) => 440 * Math.pow(2, (m - 69) / 12);
 
   function ensure() {
@@ -26,6 +37,7 @@
 
   function noteOn(midi) {
     ensure();
+    recentPC.set(pc(midi), performance.now()); // mark for mic echo suppression
     if (voices.has(midi)) return;
     const now = ctx.currentTime;
     const freq = midiToFreq(midi);
@@ -92,5 +104,5 @@
     osc.stop(now + 0.06);
   }
 
-  window.PianoAudio = { ensure, noteOn, noteOff, pluck, click, midiToFreq };
+  window.PianoAudio = { ensure, noteOn, noteOff, pluck, click, midiToFreq, isEcho };
 })();

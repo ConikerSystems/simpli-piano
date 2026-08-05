@@ -159,8 +159,12 @@
       this._emit();
     }
 
-    input(midi) {
+    input(midi, fromMic) {
       if (this.done || this._resolved) return;
+      // Mic detections are fuzzy — a non-matching mic note is ignored rather
+      // than graded, so room noise / harmonics can't fail a drill or burn a
+      // test prompt. Screen taps are always graded.
+      if (fromMic && !this._matches(midi)) return;
       this.total++;
       if (this._matches(midi)) {
         this.correct++; this.streak++;

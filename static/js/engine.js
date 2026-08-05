@@ -185,8 +185,8 @@
       }
     }
 
-    // ---- Input (from the keyboard) ---------------------------------------
-    input(midi) {
+    // ---- Input (from the keyboard, or the mic with fromMic=true) ----------
+    input(midi, fromMic) {
       if (!this.running) return;
       const note = this.playable[this.cursor];
       if (!note) return;
@@ -194,7 +194,7 @@
       // Moving mode: only accept while the note is within its timing window.
       if (this.mode === "moving") {
         const dist = Math.abs(this.playhead - note.startBeat);
-        if (dist > WINDOW_BEATS + 0.15) { this.keyboard.flash(midi, "bad"); return; }
+        if (dist > WINDOW_BEATS + 0.15) { if (!fromMic) this.keyboard.flash(midi, "bad"); return; }
       }
 
       // Exact match, or (when the mic is on) any octave of an expected note —
@@ -207,7 +207,10 @@
         this.remaining.delete(matched);
         this.keyboard.flash(matched, "good"); // light the on-screen key for the expected note
         if (this.remaining.size === 0) this._noteComplete(note);
-      } else {
+      } else if (!fromMic) {
+        // Screen taps are deliberate — grade them. Mic detections are fuzzy
+        // (harmonics, room noise), so a non-matching mic note is IGNORED:
+        // the lesson simply keeps waiting for the right pitch.
         this.mistakeThisNote = true;
         this.keyboard.flash(midi, "bad");
       }
