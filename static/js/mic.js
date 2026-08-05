@@ -10,14 +10,22 @@
   "use strict";
 
   const freqToMidi = (f) => Math.round(69 + 12 * Math.log2(f / 440));
+  const QUIET_RMS = 0.006;   // below this the frame is silence (was 0.01 — too
+                             // deaf for a piano across the room)
+  const STABLE_FRAMES = 2;   // frames that must agree before a note fires
+  const FREQ_LO = 55, FREQ_HI = 2100; // accept piano melody range only
+
+  function rmsOf(buf) {
+    let s = 0;
+    for (let i = 0; i < buf.length; i++) s += buf[i] * buf[i];
+    return Math.sqrt(s / buf.length);
+  }
 
   // Autocorrelation pitch detector. Returns frequency in Hz or -1 if unsure.
   function autoCorrelate(buf, sampleRate) {
     const SIZE = buf.length;
-    let rms = 0;
-    for (let i = 0; i < SIZE; i++) rms += buf[i] * buf[i];
-    rms = Math.sqrt(rms / SIZE);
-    if (rms < 0.01) return -1; // too quiet
+    const rms = rmsOf(buf);
+    if (rms < QUIET_RMS) return -1; // too quiet
 
     let r1 = 0, r2 = SIZE - 1;
     const thres = 0.2;
@@ -47,6 +55,9 @@
       this.running = false;
       this.lastMidi = null;
       this.silentFrames = 0;
+      this.pendingMidi = null; // candidate awaiting STABLE_FRAMES agreement
+      this.pendingCount = 0;
+      this.prevRms = 0;        // previous frame's level (for re-attack detection)
     }
 
     async start() {
@@ -66,21 +77,37 @@
     _loop(sampleRate) {
       if (!this.running) return;
       this.analyser.getFloatTimeDomainData(this.buf);
+      const rms = rmsOf(this.buf);
       const freq = autoCorrelate(this.buf, sampleRate);
 
-      if (freq > 0 && freq < 2000) {
+      if (freq >= FREQ_LO && freq <= FREQ_HI) {
         const midi = freqToMidi(freq);
         this.silentFrames = 0;
-        // Fire once per onset: when the detected note changes (or after a gap).
-        if (midi !== this.lastMidi) {
-          this.lastMidi = midi;
-          this.onNote(midi);
+        // A sharp jump in level while the SAME pitch rings = the key was struck
+        // again (melodies repeat notes constantly — D D F F A A…). Clear
+        // lastMidi so the repeat registers as a fresh onset.
+        if (midi === this.lastMidi && rms > 0.02 && rms > this.prevRms * 2.5) {
+          this.lastMidi = null;
+        }
+        if (midi === this.lastMidi) {
+          this.pendingMidi = null; this.pendingCount = 0;
+        } else if (midi === this.pendingMidi) {
+          // Same candidate again — fire once it's held STABLE_FRAMES frames.
+          if (++this.pendingCount >= STABLE_FRAMES) {
+            this.pendingMidi = null; this.pendingCount = 0;
+            this.lastMidi = midi;
+            this.onNote(midi);
+          }
+        } else {
+          this.pendingMidi = midi; this.pendingCount = 1; // new candidate
         }
         this.onLevel(midi);
       } else {
         this.silentFrames++;
+        this.pendingMidi = null; this.pendingCount = 0;
         if (this.silentFrames > 4) { this.lastMidi = null; } // allow the same note to retrigger
       }
+      this.prevRms = rms;
       this.raf = requestAnimationFrame(() => this._loop(sampleRate));
     }
 

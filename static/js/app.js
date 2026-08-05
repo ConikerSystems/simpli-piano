@@ -147,8 +147,15 @@
       micBtn.textContent = "🎤 …";
       try {
         const mic = new window.Mic.Mic({
-          onNote: (m) => { if (typeof window._micTarget === "function") window._micTarget(m); },
+          // Drop notes the app itself just played (on-screen taps, Listen
+          // playback) — the mic hears the speaker and would otherwise feed the
+          // app's own sound back in as "wrong" input a beat late.
+          onNote: (m) => {
+            if (window.PianoAudio.isEcho(m)) return;
+            if (typeof window._micTarget === "function") window._micTarget(m, true);
+          },
           onLevel: (m) => {
+            if (window.PianoAudio.isEcho(m)) return; // only show what YOU play
             micNote.textContent = window.Theory.midiToName(m);
             clearTimeout(noteTimer);
             noteTimer = setTimeout(() => { micNote.textContent = ""; }, 500);
@@ -580,9 +587,9 @@
     // glowing key (or plays into the mic) before pressing Start sees nothing
     // happen. Auto-start on the first note so playing just works. Moving mode
     // still needs Start (it has a metronome/count-in clock).
-    const play = (m) => {
+    const play = (m, fromMic) => {
       if (!engine.running && mode === "step") begin();
-      engine.input(m);
+      engine.input(m, fromMic);
     };
     kb.onPress = play;
     // Route the (persistent) mic to this lesson; grade by note name while it's on.
@@ -889,7 +896,7 @@
     });
     window._active = trainer;
     kb.onPress = (m) => trainer.input(m);
-    window._micTarget = (m) => trainer.input(m); // global mic feeds the drill
+    window._micTarget = (m, fromMic) => trainer.input(m, fromMic); // global mic feeds the drill
 
     const showKeyBtn = el("button", { class: "chip" + (opts.showKey !== false ? " active" : ""),
       onclick: () => { const on = !showKeyBtn.classList.contains("active"); showKeyBtn.classList.toggle("active", on); trainer.setShowKey(on); } }, "Show key");
