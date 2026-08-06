@@ -216,6 +216,19 @@ header.about-bar .nav { display: flex; align-items: center; gap: 10px; }
 .fav-suggest { display: block; max-width: 680px; margin: 14px auto 24px; }
 
 /* ---- Lesson ---- */
+/* Which hand to play with — stated on every lesson. */
+.lesson-hand {
+  flex: 0 0 auto; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  max-width: 680px; margin: 10px auto 0; padding: 0 14px;
+}
+.hand-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 14px; border-radius: 999px; font-size: 15px; font-weight: 650;
+  background: rgba(110, 168, 254, 0.16); color: var(--accent);
+  border: 1px solid rgba(110, 168, 254, 0.45);
+}
+/* NB: NOT .hand-tip — that class is the Hands overlay's fingertip circle. */
+.hand-note { font-size: 12.5px; color: var(--muted); }
 .lesson-focus {
   flex: 0 0 auto; margin: 10px auto 2px; max-width: 680px;
   padding: 10px 14px; border-radius: 10px; font-size: 14px; line-height: 1.45;
