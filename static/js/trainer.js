@@ -120,7 +120,15 @@
       this.correct = 0; this.total = 0; this.streak = 0; this.done = false;
     }
 
-    pool() { return this.fixedNotes || LEVELS[Math.min(this.level, LEVELS.length - 1)]; }
+    /* Only ever ask for notes the learner can actually reach: the keyboard may
+       show a narrower span so keys stay real-piano width. */
+    pool() {
+      const base = this.fixedNotes || LEVELS[Math.min(this.level, LEVELS.length - 1)];
+      const keys = this.keyboard && this.keyboard.keyEls;
+      if (!keys || !keys.size) return base;
+      const onKeyboard = base.filter((m) => keys.has(m));
+      return onKeyboard.length ? onKeyboard : base;
+    }
 
     start() {
       this.startedAt = performance.now();
