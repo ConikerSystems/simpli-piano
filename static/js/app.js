@@ -572,6 +572,8 @@
       modeBtn, el("label", { class: "tempo" }, [el("span", {}, "Tempo"), tempo, tempoVal]),
       fingersChip(() => hands, kbWrap), listenBtn, startBtn,
     ]);
+    // Shown only when the song needs more keys than fit at real-piano size.
+    const sizeNote = el("span", { class: "hand-note size-note" }, "");
     // Which hand — shown on EVERY lesson so it's never a guess. (The keyboard
     // alone doesn't say, and a one-hand song looks identical to a two-hand one.)
     const HAND_LABEL = { left: "🤚  Left hand", both: "🙌  Both hands", right: "✋  Right hand" };
@@ -580,6 +582,7 @@
       el("span", { class: "hand-note" }, song.hand === "both"
         ? "Tap 🖐 Hands to see which finger plays each key."
         : "Only this hand — tap 🖐 Hands to see which finger plays each key."),
+      sizeNote,
     ]);
     // Optional "what to work on" line (favorites/pop excerpts set song.focus).
     const focusEl = song.focus ? el("div", { class: "lesson-focus" }, "🎯  " + song.focus) : null;
@@ -588,11 +591,25 @@
     const r = window.Songs.rangeOf(song.notes);
     const startC = r.lo - ((r.lo % 12 + 12) % 12);
     const octaves = Math.max(1, Math.ceil((r.hi - startC) / 12));
-    const kb = new window.Keyboard(kbEl, { startMidi: startC, octaves, showLabels: true });
+    const kb = new window.Keyboard(kbEl, { startMidi: startC, octaves, showLabels: true, realSize: true });
     window._kb = kb;
+    // Keep the falling-note lane exactly as wide as the keyboard, so each note
+    // block still lines up over its key now that the keyboard is real-size.
+    const syncLane = () => {
+      kb._applyRealSize();
+      if (kb.renderedWidth) {
+        lane.style.width = kb.renderedWidth + "px";
+        lane.style.marginLeft = "auto";
+        lane.style.marginRight = "auto";
+      }
+      sizeNote.textContent = kb.atRealSize ? ""
+        : "Turn the iPad sideways for full-size keys.";
+    };
     hands = new window.Hands(kb, kbWrap);
     hands.set(fingerMapForSong(song));
     hands.setOn(handsOn());
+    syncLane();
+    window._relayout = () => { kb.render(); syncLane(); engine.load(song, { mode, tempoScale }); };
 
     const engine = new window.LessonEngine({
       laneEl: lane, keyboard: kb,
@@ -883,8 +900,9 @@
     const kbEl = el("div", {});
     const kbWrap = el("div", { class: "kb-wrap" }, kbEl);
 
-    const kb = new window.Keyboard(kbEl, { startMidi: opts.kbStart || 60, octaves: opts.kbOctaves || 2, showLabels: true });
+    const kb = new window.Keyboard(kbEl, { startMidi: opts.kbStart || 60, octaves: opts.kbOctaves || 2, showLabels: true, realSize: true, fitRealSize: true });
     window._kb = kb;
+    window._relayout = () => kb.render(); // keep real-size keys across rotation
     const hands = new window.Hands(kb, kbWrap);
     hands.set(opts.clef === "bass" ? { left: { pinky: opts.kbStart || 48 } } : { right: opts.kbStart || 60 });
     hands.setOn(handsOn());

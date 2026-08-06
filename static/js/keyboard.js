@@ -33,6 +33,18 @@
   const MIN_WHITE_KEY_PX = 46;
   const MIN_OCTAVES = 1, MAX_OCTAVES = 4;
 
+  /* Real-piano white-key width in CSS px.
+   * A real white key is 23.5mm (a 165mm octave / 7). An 11" iPad is 178.5mm
+   * across 834 CSS px ≈ 4.67 px/mm → ~110px; landscape works out the same, so
+   * 112 is the tablet calibration (the number Free Play was already tuned to).
+   * Phones get a slightly narrower key so a useful span still fits. */
+  const REAL_KEY_PX = () => {
+    const ua = navigator.userAgent || "";
+    const ipad = /iPad/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    const tablet = ipad || Math.min(window.screen.width, window.screen.height) >= 700;
+    return tablet ? 112 : 80;
+  };
+
   class Keyboard {
     constructor(el, opts = {}) {
       this.el = el;
@@ -44,6 +56,13 @@
       this.octaves = opts.octaves ?? null;      // null => auto-fit to width
       this.fixedRange = opts.octaves != null;
       this.whiteCount = opts.whiteCount ?? null; // explicit white-key count (Free Play hand modes)
+      // Cap key width at real-piano size so keys never stretch FATTER than a
+      // real key on a wide screen. Lessons/trainers set this, so a 8-key song
+      // and a 15-key drill show identically-sized keys.
+      this.maxKeyPx = opts.realSize ? REAL_KEY_PX() : null;
+      // Drills can show FEWER keys rather than shrink them (a reading drill
+      // doesn't need a fixed span). Songs can't — every note must stay visible.
+      this.fitRealSize = !!opts.fitRealSize;
       this.keyEls = new Map();                  // midi -> element
       this.pointerNote = new Map();             // pointerId -> midi
       this.el.classList.add("keyboard");
@@ -88,6 +107,13 @@
       else if (this.fixedRange) { whiteCount = (this.octaves || 2) * 7 + 1; }
       else whiteCount = this._autoOctaves() * 7 + 1;
 
+      // Trim the span so keys stay at real-piano width instead of shrinking.
+      if (this.fitRealSize && this.maxKeyPx) {
+        this.el.style.width = "";
+        const avail = this.el.clientWidth || this.el.parentElement?.clientWidth || window.innerWidth;
+        whiteCount = Math.max(5, Math.min(whiteCount, Math.floor(avail / this.maxKeyPx)));
+      }
+
       this.el.innerHTML = "";
       this.el.classList.toggle("no-labels", !this.showLabels);
       this.keyEls = new Map();
@@ -119,6 +145,27 @@
         el.style.left = (unit * (idx + 1) - bw / 2) + "%";
         this.el.appendChild(el);
       });
+
+      this._applyRealSize();
+    }
+
+    /* Constrain the keyboard to real-piano key width (centred). If the range
+       needs more room than the screen has, keys shrink to fit rather than
+       scrolling — a learner has to see every note of the song at once.
+       Returns the actual per-key width so callers can align the note lane. */
+    _applyRealSize() {
+      if (!this.maxKeyPx) return null;
+      this.el.style.width = "";                       // measure the space available
+      const avail = this.el.clientWidth || this.el.parentElement?.clientWidth || window.innerWidth;
+      const want = this._whiteCount * this.maxKeyPx;
+      const w = Math.min(avail, want);
+      this.el.style.width = w + "px";
+      this.el.style.marginLeft = "auto";
+      this.el.style.marginRight = "auto";
+      this.keyPx = w / this._whiteCount;
+      this.atRealSize = w >= want - 0.5;
+      this.renderedWidth = w;
+      return this.keyPx;
     }
 
     _makeKey(midi, kind) {
