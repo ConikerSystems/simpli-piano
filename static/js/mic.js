@@ -10,9 +10,12 @@
   "use strict";
 
   const freqToMidi = (f) => Math.round(69 + 12 * Math.log2(f / 440));
-  const QUIET_RMS = 0.006;   // below this the frame is silence (was 0.01 — too
-                             // deaf for a piano across the room)
-  const STABLE_FRAMES = 2;   // frames that must agree before a note fires
+  // Absolute floor is deliberately LOW; the useful gate is the adaptive noise
+  // floor below, so a quiet piano (or a quiet iPad mic) still registers while
+  // a noisy room doesn't produce phantom notes.
+  const QUIET_RMS = 0.0012;
+  const STABLE_FRAMES = 3;   // frames that must agree before a note fires (~50ms;
+                             // 2 let noise-to-signal transitions slip through)
   const FREQ_LO = 55, FREQ_HI = 2100; // accept piano melody range only
   // Re-attack (onset) detection, so REPEATED notes register — melodies are full
   // of them (Sound of Silence plays A A, then A A A). A struck piano note
@@ -26,7 +29,8 @@
   // just filters jitter. Tuned SENSITIVE on purpose — a stray detection is
   // harmless (the lesson ignores mic notes that don't match), while a missed
   // strike blocks the learner, so the costs are lopsided.
-  const ONSET_FLOOR = 0.01;  // ignore rises in near-silence (room noise)
+  const ONSET_FLOOR = 0.004; // ignore rises in near-silence (room noise)
+  const NOISE_MULT = 2.2;    // signal must beat the measured room noise by this
   const ONSET_RATIO = 1.12;  // rise above the recent average that counts
   const ONSET_MIN_MS = 100;  // debounce: no two onsets closer than this
   const AVG_ALPHA = 0.18;    // EMA weight (~6 frames ≈ 100ms of history)
@@ -65,9 +69,15 @@
   }
 
   class Mic {
-    constructor({ onNote, onLevel } = {}) {
+    constructor({ onNote, onLevel, onAudio } = {}) {
       this.onNote = onNote || (() => {});
       this.onLevel = onLevel || (() => {});
+      // Fires EVERY frame with the raw level — powers the "is it hearing me?"
+      // meter, which is the only way a learner can tell the mic is working.
+      this.onAudio = onAudio || (() => {});
+      // Starts low and converges DOWN quickly, so a quiet room yields a quiet
+      // gate within a second rather than staying deaf to a soft piano.
+      this.noiseFloor = 0.0015;
       this.running = false;
       this.lastMidi = null;
       this.silentFrames = 0;
@@ -98,8 +108,11 @@
       now = now === undefined ? performance.now() : now;
       const rms = rmsOf(buf);
       const freq = autoCorrelate(buf, sampleRate);
+      // Loud enough to be a note rather than room tone?
+      const audible = rms > QUIET_RMS && rms > this.noiseFloor * NOISE_MULT;
+      this.onAudio(rms, audible, this.noiseFloor);
 
-      if (freq >= FREQ_LO && freq <= FREQ_HI) {
+      if (freq >= FREQ_LO && freq <= FREQ_HI && audible) {
         const midi = freqToMidi(freq);
         this.silentFrames = 0;
 
@@ -130,6 +143,10 @@
         this.silentFrames++;
         this.pendingMidi = null; this.pendingCount = 0;
         if (this.silentFrames > 4) this.lastMidi = null; // a gap — allow retrigger
+        // Learn the room's noise level from the quiet stretches (slowly, and
+        // only downward-biased, so a sustained note can't raise the gate).
+        this.noiseFloor += (rms < this.noiseFloor ? 0.15 : 0.004) * (rms - this.noiseFloor);
+        this.noiseFloor = Math.max(0.0004, Math.min(0.05, this.noiseFloor));
       }
       // Track the level last, so the comparisons above see the PREVIOUS frame.
       this.avgRms = this.avgRms ? this.avgRms + AVG_ALPHA * (rms - this.avgRms) : rms;

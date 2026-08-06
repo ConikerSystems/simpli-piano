@@ -405,6 +405,16 @@ a.chip { text-decoration: none; display: inline-flex; align-items: center; }
 .mic-wrap { display: inline-flex; align-items: center; gap: 8px; }
 .chip.mic.active { background: var(--bad); color: #fff; border-color: var(--bad); }
 .mic-note { font-size: 12px; color: var(--muted); min-width: 56px; }
+/* Live input meter — proof the mic is hearing something. */
+.mic-meter {
+  flex: 0 0 auto; width: 46px; height: 8px; border-radius: 999px;
+  background: #20242f; border: 1px solid var(--line); overflow: hidden; margin-right: 6px;
+}
+.mic-meter-fill {
+  display: block; height: 100%; width: 0; border-radius: 999px;
+  background: #4a5570; transition: width 0.08s linear, background 0.12s;
+}
+.mic-meter-fill.hot { background: var(--good); }
 
 /* ---- Completion overlay ---- */
 .overlay { position: fixed; inset: 0; background: rgba(8,10,15,0.7); display: grid; place-items: center; z-index: 50; }

@@ -141,9 +141,19 @@
       if (window._active && window._active.setOctaveTolerant) window._active.setOctaveTolerant(false);
     };
 
+    // Live "is it hearing me?" meter — without it there's no way to tell a dead
+    // mic from a mis-heard note, which is the hardest thing to debug remotely.
+    const meter = el("span", { class: "mic-meter", hidden: "" }, el("span", { class: "mic-meter-fill" }));
+    micNote.parentNode.insertBefore(meter, micNote);
+    const meterFill = meter.firstChild;
+
     micBtn.onclick = async () => {
-      if (window._mic) { window._mic.stop(); setOff(); return; }
-      if (!window.Mic || !window.Mic.supported) { micBtn.textContent = "🎤 n/a"; return; }
+      if (window._mic) { window._mic.stop(); setOff(); meter.hidden = true; return; }
+      if (!window.Mic || !window.Mic.supported) {
+        micBtn.textContent = "🎤 n/a";
+        alert("This browser can't use the microphone.\n\nOn iPad, open Simpli Piano in Safari (or the installed app) — and make sure the page is on https://.");
+        return;
+      }
       micBtn.textContent = "🎤 …";
       try {
         const mic = new window.Mic.Mic({
@@ -160,14 +170,31 @@
             clearTimeout(noteTimer);
             noteTimer = setTimeout(() => { micNote.textContent = ""; }, 500);
           },
+          // Every frame: move the meter so a working mic is visibly obvious.
+          onAudio: (rms, audible) => {
+            const pct = Math.max(0, Math.min(100, (Math.log10(Math.max(rms, 1e-4)) + 4) * 33));
+            meterFill.style.width = pct + "%";
+            meterFill.classList.toggle("hot", audible);
+          },
         });
         await mic.start();
         window._mic = mic;
+        meter.hidden = false;
         micBtn.classList.add("active");
         micBtn.setAttribute("aria-pressed", "true");
         micBtn.textContent = "🎤 On";
         if (window._active && window._active.setOctaveTolerant) window._active.setOctaveTolerant(true);
-      } catch { setOff("🎤 ✕"); }
+      } catch (err) {
+        setOff("🎤 ✕");
+        meter.hidden = true;
+        // Say what actually went wrong — a bare ✕ leaves the learner stuck.
+        const name = (err && err.name) || "";
+        alert(name === "NotAllowedError" || name === "SecurityError"
+          ? "Simpli Piano doesn't have microphone permission.\n\nOn iPad: Settings › Safari › Microphone › Allow — or, for the installed app, Settings › Simpli Piano › Microphone. Then tap 🎤 Mic again."
+          : name === "NotFoundError"
+            ? "No microphone was found on this device."
+            : "Couldn't start the microphone (" + (name || "unknown error") + "). Close other apps using the mic and try again.");
+      }
     };
   }
 
