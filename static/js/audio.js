@@ -13,9 +13,13 @@
   // The mic runs with echoCancellation OFF (for pitch accuracy), so it hears
   // the app's own speaker; isEcho() lets the mic wiring drop those detections
   // instead of grading them as the learner's (wrong) input.
+  // Stamped at noteOn AND noteOff (so a long-held tone is covered through its
+  // release), with a short window past the stamp — just enough for the ~0.3s
+  // release tail plus mic latency. Longer windows swallow the learner's REAL
+  // playing of a note the app recently sounded (e.g. repeat after Listen).
   const recentPC = new Map();
   const pc = (m) => ((m % 12) + 12) % 12;
-  function isEcho(midi, withinMs = 2500) {
+  function isEcho(midi, withinMs = 1200) {
     const t = recentPC.get(pc(midi));
     return t !== undefined && performance.now() - t < withinMs;
   }
@@ -72,6 +76,7 @@
   function noteOff(midi) {
     const v = voices.get(midi);
     if (!v) return;
+    recentPC.set(pc(midi), performance.now()); // ring-out still counts as echo
     voices.delete(midi);
     const now = ctx.currentTime;
     const release = 0.28;

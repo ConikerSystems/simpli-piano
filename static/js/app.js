@@ -555,7 +555,16 @@
     const tempo = el("input", { type: "range", min: "50", max: "100", step: "5", value: "100",
       oninput: (e) => { tempoScale = e.target.value / 100; tempoVal.textContent = e.target.value + "%"; } });
     const startBtn = el("button", { class: "chip play", onclick: () => begin() }, "▶ Start");
-    const listenBtn = el("button", { class: "chip", onclick: () => engine.listen() }, "🔊 Listen");
+    // Listen is a toggle; the engine also cancels it whenever practice starts,
+    // so playback and practice never sound at the same time.
+    const setListenLabel = (on) => {
+      listenBtn.textContent = on ? "◼ Stop" : "🔊 Listen";
+      listenBtn.classList.toggle("active", on);
+    };
+    const listenBtn = el("button", { class: "chip", onclick: () => {
+      if (engine.listening) engine.stopListen();
+      else { engine.listen(() => setListenLabel(false)); setListenLabel(true); }
+    } }, "🔊 Listen");
 
     let hands = null;
     const controls = el("div", { class: "lesson-controls" }, [
