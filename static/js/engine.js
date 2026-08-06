@@ -121,6 +121,7 @@
       this.running = false;
       if (this.raf) cancelAnimationFrame(this.raf);
       this.raf = null;
+      this.stopListen(); // never let Listen playback ring under practice
       if (this.keyboard) this.keyboard.clearHighlights();
     }
 
@@ -249,19 +250,40 @@
       this.onComplete({ stars, accuracy, ...this.score });
     }
 
-    /* Play the song's notes so the learner can hear it first (no input needed). */
-    listen() {
-      this.stop();
+    /* Play the song's notes so the learner can hear it first (no input needed).
+     * Only one thing plays at a time: starting practice, restarting, leaving
+     * the page, or calling stopListen() cancels the scheduled playback —
+     * previously the timers ran to the end regardless, so Listen kept ringing
+     * over practice (and its notes suppressed real mic input as "echo"). */
+    listen(onEnd) {
+      this.stop(); // cancels any previous playback too
+      this._listenEnd = onEnd || null;
+      this._listenTimers = [];
       let t = 0;
       const mpb = this.msPerBeat();
       this.steps.forEach((s) => {
         if (!s.rest) {
           midisOf(s).forEach((m) => {
-            setTimeout(() => window.PianoAudio.pluck(m, Math.max(180, s.beats * mpb * 0.9)), t);
+            this._listenTimers.push(setTimeout(() => window.PianoAudio.pluck(m, Math.max(180, s.beats * mpb * 0.9)), t));
           });
         }
         t += s.beats * mpb;
       });
+      this.listening = true;
+      this._listenTimers.push(setTimeout(() => this._endListen(), t + 300));
+    }
+
+    _endListen() {
+      this.listening = false;
+      const cb = this._listenEnd;
+      this._listenEnd = null;
+      if (cb) cb();
+    }
+
+    stopListen() {
+      (this._listenTimers || []).forEach(clearTimeout);
+      this._listenTimers = [];
+      if (this.listening) this._endListen();
     }
   }
 
