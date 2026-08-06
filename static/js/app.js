@@ -458,7 +458,8 @@
       }
       favs.forEach((song) => {
         const sub = songDuration(song) + (song.genre ? "  ·  " + genreLabel(song.genre) : "")
-          + (song.hand === "right" ? "  ·  one hand" : song.hand === "both" ? "  ·  two hands" : "");
+          + (song.hand === "both" ? "  ·  🙌 both hands"
+             : song.hand === "left" ? "  ·  🤚 left hand" : "  ·  ✋ right hand");
         list.append(el("button", { class: "song-row", onclick: () => lesson(song.id) }, [
           el("span", { class: "song-dot diff-" + song.difficulty }, "♪"),
           el("span", { class: "song-meta" }, [
@@ -571,9 +572,18 @@
       modeBtn, el("label", { class: "tempo" }, [el("span", {}, "Tempo"), tempo, tempoVal]),
       fingersChip(() => hands, kbWrap), listenBtn, startBtn,
     ]);
+    // Which hand — shown on EVERY lesson so it's never a guess. (The keyboard
+    // alone doesn't say, and a one-hand song looks identical to a two-hand one.)
+    const HAND_LABEL = { left: "🤚  Left hand", both: "🙌  Both hands", right: "✋  Right hand" };
+    const handEl = el("div", { class: "lesson-hand" }, [
+      el("span", { class: "hand-badge" }, HAND_LABEL[song.hand] || HAND_LABEL.right),
+      el("span", { class: "hand-note" }, song.hand === "both"
+        ? "Tap 🖐 Hands to see which finger plays each key."
+        : "Only this hand — tap 🖐 Hands to see which finger plays each key."),
+    ]);
     // Optional "what to work on" line (favorites/pop excerpts set song.focus).
     const focusEl = song.focus ? el("div", { class: "lesson-focus" }, "🎯  " + song.focus) : null;
-    view.append(el("div", { class: "lesson" }, [controls, focusEl, progress, status, lane, kbWrap]));
+    view.append(el("div", { class: "lesson" }, [controls, handEl, focusEl, progress, status, lane, kbWrap]));
 
     const r = window.Songs.rangeOf(song.notes);
     const startC = r.lo - ((r.lo % 12 + 12) % 12);

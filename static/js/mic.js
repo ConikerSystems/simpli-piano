@@ -14,6 +14,22 @@
                              // deaf for a piano across the room)
   const STABLE_FRAMES = 2;   // frames that must agree before a note fires
   const FREQ_LO = 55, FREQ_HI = 2100; // accept piano melody range only
+  // Re-attack (onset) detection, so REPEATED notes register — melodies are full
+  // of them (Sound of Silence plays A A, then A A A). A struck piano note
+  // DECAYS, so a fresh strike shows up as a rise above the decaying floor.
+  // Comparing against the previous frame alone can't see this: at 60fps the
+  // attack is over within a frame or two and the frame-to-frame ratio collapses
+  // before the pitch is confirmed. So track the quietest level since the last
+  // onset and re-trigger when the level climbs back above it.
+  // The reliable discriminator is the RISING EDGE: a ringing note only ever
+  // decays, so any genuine rise means the key was struck again. The ratio then
+  // just filters jitter. Tuned SENSITIVE on purpose — a stray detection is
+  // harmless (the lesson ignores mic notes that don't match), while a missed
+  // strike blocks the learner, so the costs are lopsided.
+  const ONSET_FLOOR = 0.01;  // ignore rises in near-silence (room noise)
+  const ONSET_RATIO = 1.12;  // rise above the recent average that counts
+  const ONSET_MIN_MS = 100;  // debounce: no two onsets closer than this
+  const AVG_ALPHA = 0.18;    // EMA weight (~6 frames ≈ 100ms of history)
 
   function rmsOf(buf) {
     let s = 0;
@@ -57,7 +73,9 @@
       this.silentFrames = 0;
       this.pendingMidi = null; // candidate awaiting STABLE_FRAMES agreement
       this.pendingCount = 0;
-      this.prevRms = 0;        // previous frame's level (for re-attack detection)
+      this.avgRms = 0;         // EMA of recent level (lags a decaying note)
+      this.prevRms = 0;
+      this.lastOnsetAt = 0;
     }
 
     async start() {
@@ -74,21 +92,26 @@
       this._loop(ctx.sampleRate);
     }
 
-    _loop(sampleRate) {
-      if (!this.running) return;
-      this.analyser.getFloatTimeDomainData(this.buf);
-      const rms = rmsOf(this.buf);
-      const freq = autoCorrelate(this.buf, sampleRate);
+    /* Analyse one frame. Split out from the rAF loop so it can be driven with
+       synthetic audio in tests. `now` is injectable for the same reason. */
+    _process(buf, sampleRate, now) {
+      now = now === undefined ? performance.now() : now;
+      const rms = rmsOf(buf);
+      const freq = autoCorrelate(buf, sampleRate);
 
       if (freq >= FREQ_LO && freq <= FREQ_HI) {
         const midi = freqToMidi(freq);
         this.silentFrames = 0;
-        // A sharp jump in level while the SAME pitch rings = the key was struck
-        // again (melodies repeat notes constantly — D D F F A A…). Clear
-        // lastMidi so the repeat registers as a fresh onset.
-        if (midi === this.lastMidi && rms > 0.02 && rms > this.prevRms * 2.5) {
+
+        // Re-attack: a ringing note only decays, so a RISE means the key was
+        // struck again. Clear lastMidi so a REPEAT of the same pitch fires a
+        // fresh note instead of being swallowed as "still ringing".
+        if (rms > ONSET_FLOOR && rms > this.prevRms && rms > this.avgRms * ONSET_RATIO
+            && now - this.lastOnsetAt > ONSET_MIN_MS) {
           this.lastMidi = null;
+          this.lastOnsetAt = now;
         }
+
         if (midi === this.lastMidi) {
           this.pendingMidi = null; this.pendingCount = 0;
         } else if (midi === this.pendingMidi) {
@@ -96,6 +119,7 @@
           if (++this.pendingCount >= STABLE_FRAMES) {
             this.pendingMidi = null; this.pendingCount = 0;
             this.lastMidi = midi;
+            this.lastOnsetAt = now;
             this.onNote(midi);
           }
         } else {
@@ -105,9 +129,17 @@
       } else {
         this.silentFrames++;
         this.pendingMidi = null; this.pendingCount = 0;
-        if (this.silentFrames > 4) { this.lastMidi = null; } // allow the same note to retrigger
+        if (this.silentFrames > 4) this.lastMidi = null; // a gap — allow retrigger
       }
+      // Track the level last, so the comparisons above see the PREVIOUS frame.
+      this.avgRms = this.avgRms ? this.avgRms + AVG_ALPHA * (rms - this.avgRms) : rms;
       this.prevRms = rms;
+    }
+
+    _loop(sampleRate) {
+      if (!this.running) return;
+      this.analyser.getFloatTimeDomainData(this.buf);
+      this._process(this.buf, sampleRate);
       this.raf = requestAnimationFrame(() => this._loop(sampleRate));
     }
 
