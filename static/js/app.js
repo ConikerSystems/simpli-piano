@@ -200,18 +200,35 @@
 
   // Force-pull the latest version (iOS often resumes the installed app from
   // memory instead of reloading, so it never sees a new release). Needs network.
+  // Checks the live version first (bypassing every cache) and reports it; if newer,
+  // fully replaces the service worker + caches — r.update() alone is not enough on
+  // iOS, so unregister and let the next load install a fresh worker.
   function updateApp(btn) {
     if (!navigator.onLine) { alert("Connect to Wi-Fi or cellular, then tap Update again."); return; }
-    if (btn) btn.textContent = "🔄  Updating…";
-    (async () => {
+    const label = btn ? btn.textContent : "";
+    const say = (t) => { if (btn) btn.textContent = t; };
+    say("🔄  Checking…");
+    return (async () => {
+      let remote = null;
+      try {
+        const txt = await fetch("static/js/version.js?u=" + Date.now(), { cache: "no-store" })
+          .then((r) => r.text());
+        remote = (txt.match(/APP_VERSION\s*=\s*"([^"]+)"/) || [])[1] || null;
+      } catch (e) { /* ignore */ }
+      if (remote && remote === window.APP_VERSION) {
+        say("✅ UP TO DATE — v" + remote);
+        setTimeout(() => say(label), 3000);
+        return;
+      }
+      say(remote ? "UPDATING TO v" + remote + "…" : "UPDATING…");
       try {
         if ("serviceWorker" in navigator) {
           const regs = await navigator.serviceWorker.getRegistrations();
-          await Promise.all(regs.map((r) => r.update().catch(() => {})));
+          for (const r of regs) await r.unregister();
         }
-        if (window.caches) { const ks = await caches.keys(); await Promise.all(ks.map((k) => caches.delete(k))); }
+        if (window.caches) { const ks = await caches.keys(); for (const k of ks) await caches.delete(k); }
       } catch (e) { /* ignore */ }
-      location.href = "index.html?u=" + Date.now(); // cache-busted reload
+      location.replace("index.html?u=" + Date.now()); // cache-busted reload
     })();
   }
 

@@ -13,3 +13,24 @@ __pycache__/
 *.sqlite
 *.sqlite3
 data/
+
+# --- Sensitive files: never commit (Claude Hub standard, added 2026-09-15) ---
+*.db
+*.sqlite*
+*-wal
+*-shm
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+token*.json
+credentials*.json
+client_secret*.json
+*.sql.gz
+*.db.gz
+node_modules/
+venv/
+__pycache__/
+.DS_Store

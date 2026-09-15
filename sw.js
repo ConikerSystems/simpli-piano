@@ -1,7 +1,7 @@
 /* Simpli Piano service worker — NETWORK-FIRST so updates show when online,
    with a cached copy as the offline fallback. The app is fully self-contained
    (Web Audio synth, no external assets), so it works completely offline. */
-const VERSION = "simpli-piano-v59"; // bump to invalidate old caches on deploy
+const VERSION = "simpli-piano-v60"; // bump to invalidate old caches on deploy
 const SHELL = [
   "./",
   "index.html",
@@ -26,13 +26,18 @@ const SHELL = [
   "static/js/app.js",
   "icons/icon-192.png",
   "icons/icon-512.png",
+  "icons/icon-maskable-192.png",
+  "icons/icon-maskable-512.png",
   "icons/apple-touch-icon.png",
   "icons/favicon-32.png",
 ];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(VERSION).then((cache) => cache.addAll(SHELL)).then(() => self.skipWaiting())
+    caches.open(VERSION)
+      // cache:"reload" bypasses the HTTP cache so the precache is truly current
+      .then((cache) => cache.addAll(SHELL.map((u) => new Request(u, { cache: "reload" }))))
+      .then(() => self.skipWaiting())
   );
 });
 
@@ -51,7 +56,10 @@ self.addEventListener("fetch", (event) => {
   if (url.origin !== self.location.origin) return;
 
   event.respondWith(
-    fetch(req)
+    // cache:"no-store" makes network-first REALLY network-first: a plain fetch()
+    // can be answered by the HTTP cache with a stale file, which we would then
+    // re-save into our cache — locking an old version in (learned on iOS).
+    fetch(req, { cache: "no-store" })
       .then((res) => {
         if (res && res.ok && res.type === "basic") {
           const copy = res.clone();

@@ -1,8 +1,21 @@
 # Simpli Piano — Session Handoff
 
-_Updated: 2026-09-14_
+_Updated: 2026-09-15_
 
-## Latest — v1.9.0 → v1.9.8 (2026-07-28 → 2026-08-06, sw cache simpli-piano-v59)
+## Latest — v1.9.9 (2026-09-15, sw cache simpli-piano-v60): robust Update button
+Standards fix (WEB_APP_STANDARDS "iOS installed-app UPDATE button", ported from Axis):
+- `updateApp()` in `static/js/app.js` now fetches `static/js/version.js?u=…` with
+  `cache:"no-store"`, shows "✅ UP TO DATE — vX" (resets after 3 s) or "UPDATING TO vY…", and
+  when newer **unregisters** every SW registration (was `r.update()`, not enough on iPad),
+  deletes all caches, then `location.replace("index.html?u=…")`.
+- `sw.js`: fetch handler uses `fetch(req, {cache:"no-store"})`; precache uses
+  `new Request(u, {cache:"reload"})`; maskable icons added to SHELL.
+- `.gitignore`: added the Hub sensitive-files block.
+- Verified locally in the browser (no-store dev server): SW controls the page, footer shows
+  v1.9.9, the up-to-date path reports correctly, and a simulated older build takes the
+  unregister → clear caches → reload path cleanly. Not yet checked on a real iPad.
+
+## Prev — v1.9.0 → v1.9.8 (2026-07-28 → 2026-08-06, sw cache simpli-piano-v59)
 _Added 2026-09-14 from the commit log — these releases shipped without a HANDOFF update._
 - **v1.9.0** — ⭐ **My Favorites**: a curated home-screen list, a per-player ♥ toggle, and 💌
   Suggest a song (via the Feedback email). New right-hand openings: The Sound of Silence,
