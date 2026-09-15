@@ -1,8 +1,37 @@
 # Simpli Piano — Session Handoff
 
-_Updated: 2026-07-07_
+_Updated: 2026-09-14_
 
-## Latest — v1.8.17 (sw cache v50): finally kill the pinky lobe (anchor to real base)
+## Latest — v1.9.0 → v1.9.8 (2026-07-28 → 2026-08-06, sw cache simpli-piano-v59)
+_Added 2026-09-14 from the commit log — these releases shipped without a HANDOFF update._
+- **v1.9.0** — ⭐ **My Favorites**: a curated home-screen list, a per-player ♥ toggle, and 💌
+  Suggest a song (via the Feedback email). New right-hand openings: The Sound of Silence,
+  Yellow, Viva la Vida, The Scientist (+ the existing Clocks riff), each with a `focus` note
+  shown in its lesson.
+- **v1.9.1** — Practice (step) mode auto-starts on the first note played (tap or mic);
+  Moving mode still needs ▶ Start.
+- **v1.9.2–1.9.3** — favorites loop to ~30 s drills (new `reps` field, expanded in
+  `makeSong`) at slower beginner tempos (60–75 BPM).
+- **v1.9.4** — fixed the mic hearing the app's own speaker (echo graded as wrong notes, "0
+  clean" scores): `PianoAudio.isEcho()` drops echoes; non-matching mic notes are ignored,
+  never penalized (screen taps still graded strictly); pitch needs agreeing frames and is
+  clamped to the piano range.
+- **v1.9.5** — one sound at a time: Listen is a ◼ Stop toggle and is cancelled when practice
+  starts, restarts, or the page is left; echo window 2500→1200 ms.
+- **v1.9.6** — rising-edge onset detector so repeated notes register (Sound of Silence's
+  A A A); detection split into `Mic._process()` for synthetic-audio tests. Every lesson and
+  song row now states the hand (✋ Right / 🤚 Left / 🙌 Both).
+- **v1.9.7** — keys capped at real-piano width (23.5 mm ≈ 112 CSS px on an 11" iPad, 80 on
+  phones), keyboard centred. Songs shrink keys to fit + show a "turn sideways" hint; drills
+  show fewer full-size keys (`fitRealSize`) and `Trainer.pool()` only prompts keys on screen.
+- **v1.9.8** — mic made diagnosable: live input level meter, real error messages (permission
+  denied names the iPad Settings path), adaptive noise gate, `STABLE_FRAMES` 2→3.
+- Hub housekeeping 2026-07-27: master set to GitHub; "sync to GitHub = merge to main" policy
+  added to CLAUDE.md.
+- The v1.9.4–1.9.8 mic work was verified headless / with a fake audio device; no on-device
+  iPad check is recorded — confirm with Joe that the mic (and the A key) now work on his iPad.
+
+## Prev — v1.8.17 (sw cache v50): finally kill the pinky lobe (anchor to real base)
 Joe (3rd report): "still a bump like a stubbed 6th finger to the right of the pinky." Root
 cause found: the pinky's knuckles fan toward the palm centre, so `digits[3].baseR` sits
 ~2.8u LEFT of c5 — but the palm's right edge was drawn out at `c5+4u`, leaving a fat lobe
@@ -109,7 +138,13 @@ L/R at mobile + tablet widths, 0 console errors). Toggle chip label is **🖐 Fi
 
 
 ## Where things stand
-**v1.8.7 (sw cache v40)** — added the **🖐 Fingers hands overlay** (typing-tutor style, Joe's
+**Current: v1.9.8 (sw cache `simpli-piano-v59`)** — deployed from `main` (GitHub Pages); GitHub
+is the master, so develop in the cloud. Since the v1.8.7 notes below, the Hands overlay was
+rebuilt as an anatomical hand and always starts OFF (v1.8.12–1.8.17, sections above), then
+v1.9.0–1.9.8 added My Favorites plus a round of mic and real-size-keyboard fixes (Latest
+section at top). The v1.8.7 / v1.8.0 notes below are history.
+
+Earlier — **v1.8.7 (sw cache v40)** — added the **🖐 Fingers hands overlay** (typing-tutor style, Joe's
 request from a typing.com screenshot): `static/js/hands.js` draws two semi-transparent
 cartoon hands over the on-screen keyboard — a single natural SVG hand silhouette per hand
 (curved fingers of different lengths, opposed thumb, palm + wrist; authored for the right

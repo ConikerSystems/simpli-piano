@@ -1,5 +1,7 @@
 # Simpli Piano
 
+**At session start:** check git sync, then read **`HANDOFF.md`** for where we left off. **Refresh `HANDOFF.md`** when wrapping up, and sooner if the conversation is getting large (sections: Updated date · where things stand · what we did · unfinished · next steps · how to run/test). It is committed, so it carries context to the next session on the Mac or in the cloud.
+
 <!-- SOURCE-POLICY:START -->
 ## Source of truth: GitHub (master) — managed by Claude Hub
 
