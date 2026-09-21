@@ -27,10 +27,23 @@
     if (data.list.some((p) => p.id === id)) { data.activeId = id; persist(); }
   }
 
+  // Ids must be unique FOREVER: they namespace every saved star and streak
+  // (Profiles.key) and remove() deletes by id. A clock-only id has millisecond
+  // resolution, so two players created in the same millisecond got the SAME id —
+  // sharing one set of progress, and deleting either wiped both. Random suffix +
+  // a collision re-roll, so the id can't depend on how fast the taps came in.
+  function newId() {
+    let id;
+    do {
+      id = "p" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    } while (data.list.some((p) => p.id === id));
+    return id;
+  }
+
   function add(name, emoji) {
     if (!canAdd()) return null;
     const firstEver = data.list.length === 0;
-    const id = "p" + Date.now().toString(36) + Math.floor(performance.now()).toString(36);
+    const id = newId();
     const p = { id, name: (name || "Player").trim().slice(0, 14) || "Player", emoji: emoji || EMOJIS[0] };
     data.list.push(p);
     data.activeId = id;

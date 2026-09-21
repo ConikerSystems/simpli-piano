@@ -1,8 +1,31 @@
 # Simpli Piano — Session Handoff
 
-_Updated: 2026-09-15_
+_Updated: 2026-09-20_
 
-## Latest — v1.9.9 (2026-09-15, sw cache simpli-piano-v60): robust Update button
+## Latest — v1.9.10 (2026-09-20, sw cache simpli-piano-v61): unique player ids
+Found by a full regression pass (168 checks; this was the only real failure).
+- **Bug:** `Profiles.add()` built the id from the clock only — `Date.now()` plus
+  `Math.floor(performance.now())`, both millisecond-resolution — so two players created in
+  the SAME millisecond received an identical id. They then shared one set of stars and
+  progress (`Profiles.key()` namespaces by id), and removing either deleted both, because
+  `remove()` filters by id. Reproduced: five players in a tight loop all got `pmuahwjkp1ui4`,
+  and one `remove()` left one player. Real-world risk is low (a person can't tap "Create
+  player" twice in a millisecond) but it is silent and it destroys saved progress.
+- **Fix** in [profiles.js](static/js/profiles.js): new `newId()` — clock + a random base-36
+  suffix, re-rolled if it ever collides with an existing player.
+- **Verified:** 5 players in a tight loop now get 5 distinct ids; delete removes exactly one;
+  per-player progress keys stay distinct; one player's stars neither leak to nor are wiped by
+  another. Through the real UI: Ana earned ★★★ on Hot Cross Buns, Ben was created with a
+  different id and a clean slate, deleting Ben left Ana's stars untouched. Existing devices
+  are unaffected — a profile already saved with an old-format id keeps its name, stars and
+  course progress (tested by seeding an old-format profile and reloading).
+- Full regression re-run on this build: 47/47 logic checks, 5/5 end-to-end UI checks, footer
+  v1.9.10, single cache `simpli-piano-v61`. Not yet checked on a real iPad.
+- Known nit, NOT fixed (never reached on iPad Safari, which has `navigator.share`):
+  [feedback.js:63](static/js/feedback.js) — the last-resort share fallback calls
+  `window.prompt()`, which throws where prompts are blocked. Wrap in try/catch next time.
+
+## Prev — v1.9.9 (2026-09-15, sw cache simpli-piano-v60): robust Update button
 Standards fix (WEB_APP_STANDARDS "iOS installed-app UPDATE button", ported from Axis):
 - `updateApp()` in `static/js/app.js` now fetches `static/js/version.js?u=…` with
   `cache:"no-store"`, shows "✅ UP TO DATE — vX" (resets after 3 s) or "UPDATING TO vY…", and
