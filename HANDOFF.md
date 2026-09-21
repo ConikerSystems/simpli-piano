@@ -1,8 +1,36 @@
 # Simpli Piano — Session Handoff
 
-_Updated: 2026-09-20_
+_Updated: 2026-09-20 (test suite + push gate added)_
 
-## Latest — v1.9.10 (2026-09-20, sw cache simpli-piano-v61): unique player ids
+## Latest — a committed test suite, and a push gate (2026-09-20)
+
+Piano was one of eight programs with **no `"test"` command** in `.claude/source.json`,
+so the autosave hook pushed whatever was in the tree at session end, working or not.
+It now has one: `sh tests/run.sh`, wired as the gate.
+
+- **91 node assertions across four files**, plus the 9 iCloud fence checks copied from
+  axis. No dependencies, no `package.json`, no build step — the tests build a `global.window`
+  and require the modules in the same order `index.html` does.
+- `theory` (note↔MIDI + the text notation + every shipped song parses) ·
+  `engine` (grading, chords, the good/ok rule, star thresholds at 0.9/0.7/0.4, the
+  mic-vs-tap asymmetry, moving-mode windows, Listen/practice exclusivity) ·
+  `course` (unlocking, the 80% pass mark, and **every song lesson points at a song that
+  exists**) · `stats` (local-day logging, streak, goal callouts, per-player separation).
+- **The gate was proven able to fail:** lower-casing one character in `midiToName` turns
+  two tests red and exits 1; restoring it returns to 0.
+- Earlier sessions ran "168 checks" ad hoc and reported them in this file. Those were
+  never committed, so each session re-invented them. These are files now.
+
+**The limit, stated plainly in `tests/README.md`:** `app.js`, `mic.js`, `trainer.js`,
+`hands.js`, `feedback.js` and the keyboard's rendering need a real browser and are **not**
+covered. A green suite means the engine is sound, **not** that the page works — opening the
+app is still the check for anything visual.
+
+**Still open, untouched:** the known nit below — [feedback.js:63](static/js/feedback.js)
+calls `window.prompt()` in the last-resort share fallback and throws where prompts are
+blocked. It sits in an uncovered module, so the suite will not catch it either.
+
+## Prev — v1.9.10 (2026-09-20, sw cache simpli-piano-v61): unique player ids
 Found by a full regression pass (168 checks; this was the only real failure).
 - **Bug:** `Profiles.add()` built the id from the clock only — `Date.now()` plus
   `Math.floor(performance.now())`, both millisecond-resolution — so two players created in
